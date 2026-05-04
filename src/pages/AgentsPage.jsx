@@ -21,7 +21,7 @@ Certs: CSM, SAFe POPM, PMP (exp Jun 2026), Azure, Gen AI
 Tools: JIRA, Confluence, Power BI, Selenium, Smartsheet, Azure`
 
 const SOURCES_AGENT1 = ['TekSystems Houston','The Judge Group','Insight Global','Kforce','Modis / Experis','LinkedIn Jobs','Indeed','Dice','Glassdoor','CyberCoders']
-const SOURCES_AGENT2 = ['JP Morgan Chase','Wells Fargo','USAA','Charles Schwab','Fidelity','Frost Bank','Slalom Consulting','West Monroe Partners','Pariveda Solutions','Capco Consulting','Huron Consulting','Opportune LLP','Deloitte']
+const SOURCES_AGENT2 = ['JP Morgan Chase','Wells Fargo','USAA','Charles Schwab','Fidelity','Frost Bank','Slalom Consulting','West Monroe Partners','Pariveda Solutions','Capco Consulting','Huron Consulting','Opportune LLP','Deloitte','City of Houston (governmentjobs.com/careers/houston)','Harris County (governmentjobs.com/careers/harriscountytx)','State of Texas (capps.taleo.net)']
 
 const AUTOMATION = [
   { label: 'Option A — Manual reminder', detail: 'Set a phone alarm every Mon/Wed/Fri at 8 AM. Open this app and click Run on Agent 1 + 2. Takes 2 minutes.', effort: 'Zero setup' },
