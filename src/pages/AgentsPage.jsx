@@ -1,5 +1,5 @@
 //
-// AgentsPage.jsx — LIVE AGENTS v2
+// AgentsPage.jsx — LIVE AGENTS v3
 // Calls Anthropic API directly from browser using VITE_ANTHROPIC_API_KEY
 // Add VITE_ANTHROPIC_API_KEY to Vercel env vars (must start with VITE_ to be exposed to browser)
 
@@ -37,7 +37,7 @@ const AUTOMATION = [
 async function runAgentCall(agentName, sources, extra) {
   if (!ANTHROPIC_KEY) throw new Error('VITE_ANTHROPIC_API_KEY not set in Vercel environment variables')
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('/api/claude', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
