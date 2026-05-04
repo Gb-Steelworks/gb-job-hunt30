@@ -75,6 +75,14 @@ const SEED_LEADS = [
     apply_link: 'https://www.kforce.com/find-work/search-jobs/?keyword=product+owner+houston'
   },
   {
+    id: 39, role_title: 'IT Project Manager', company: 'Kforce (Client - Irving TX)',
+    via: 'Kforce Dallas', category: 'PM', type: 'Contract', work_model: 'Hybrid',
+    pay_rate: 'TBD', days_posted: 5, match_score: 93,
+    contact_name: 'Kforce Dallas Recruiting', contact_email: '',
+    status: 'New', notes: 'Irving TX (Dallas area). Central coordination between business stakeholders, product owners, delivery teams. Backlog mgmt, requirements gathering, stakeholder updates. Spotted by George on Kforce.com 5/4/26.',
+    apply_link: 'https://www.kforce.com/find-work/search-jobs/?keyword=IT+project+manager&location=Dallas%2C+TX'
+  },
+  {
     id: 11, role_title: 'Senior Business Analyst / QA Lead', company: 'Conviso Inc.',
     via: 'Jooble / Indeed', category: 'QA', type: 'Contract', work_model: 'Remote',
     pay_rate: 'TBD', days_posted: 10, match_score: 96,
@@ -309,7 +317,7 @@ function SortIcon({ col, sortCol, sortDir }) {
 
 function scoreColor(s) { return s >= 90 ? 'var(--success)' : s >= 80 ? 'var(--warn)' : 'var(--text3)' }
 
-export default function LeadsPage({ onApplicationLogged, agentLeads = [], initialCompanyFilter = '', onClearCompanyFilter }) {
+export default function LeadsPage({ onApplicationLogged, agentLeads = [], initialCompanyFilter = '', onClearCompanyFilter, onNewRolePattern }) {
   const [leads, setLeads] = useState(SEED_LEADS)
   const [search, setSearch] = useState(initialCompanyFilter)
   const [fType, setFType] = useState('')
@@ -320,7 +328,28 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
   const [sortDir, setSortDir] = useState('desc')
   const [activeRole, setActiveRole] = useState(null)
   const [checking, setChecking] = useState(false)
-  const [checkResults, setCheckResults] = useState({}) // id -> 'ok' | 'dead' | 'checking'
+  const [checkResults, setCheckResults] = useState({})
+
+  // Add Lead modal state
+  const [showAddLead, setShowAddLead] = useState(false)
+  const [newLead, setNewLead] = useState({
+    role_title: '', company: '', work_model: 'Hybrid', type: 'Full-Time',
+    pay_rate: '', days_posted: 1, match_score: 85, category: 'BA',
+    contact_name: '', contact_email: '', apply_link: '', notes: '',
+    status: 'New', via: 'Manual entry'
+  })
+
+  const fl = (k, v) => setNewLead(prev => ({ ...prev, [k]: v }))
+
+  const handleAddLead = () => {
+    if (!newLead.role_title || !newLead.company) return
+    const lead = { ...newLead, id: Date.now() }
+    setLeads(prev => [lead, ...prev])
+    // Feed role pattern back to agents
+    onNewRolePattern?.({ role_title: newLead.role_title, company: newLead.company, location: newLead.work_model })
+    setShowAddLead(false)
+    setNewLead({ role_title: '', company: '', work_model: 'Hybrid', type: 'Full-Time', pay_rate: '', days_posted: 1, match_score: 85, category: 'BA', contact_name: '', contact_email: '', apply_link: '', notes: '', status: 'New', via: 'Manual entry' })
+  }
 
   const checkAllLinks = async () => {
     setChecking(true)
@@ -376,7 +405,14 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
       const q = search.toLowerCase()
       if (q && !l.role_title.toLowerCase().includes(q) && !l.company.toLowerCase().includes(q)) return false
       if (fType && l.type !== fType) return false
-      if (fModel && l.work_model !== fModel) return false
+      if (fModel) {
+        if (fModel === 'Dallas' || fModel === 'Austin') {
+          const loc = fModel.toLowerCase()
+          if (!((l.notes || '').toLowerCase().includes(loc) || (l.company || '').toLowerCase().includes(loc) || (l.via || '').toLowerCase().includes(loc))) return false
+        } else {
+          if (l.work_model !== fModel) return false
+        }
+      }
       if (fRole && l.category !== fRole) return false
       if (fStatus && l.status !== fStatus) return false
       return true
@@ -431,6 +467,8 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
             <option>Remote</option>
             <option>Hybrid</option>
             <option>On-site</option>
+            <option value="Dallas">Dallas / Irving</option>
+            <option value="Austin">Austin</option>
           </select>
           <select value={fRole} onChange={e => setFRole(e.target.value)}>
             <option value="">All roles</option>
@@ -454,6 +492,7 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
         >
           {checking ? '⏳ Checking...' : '🔗 Check Links'}
         </button>
+        <button className="btn btn-accent" onClick={() => setShowAddLead(true)}>+ Add Lead</button>
       </div>
 
       <div className="table-wrap">
@@ -461,14 +500,15 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
           <thead>
             <tr>
               {[
-                ['role_title', 'Role', 180],
-                ['company', 'Company', 110],
-                ['type', 'Type', 110],
-                ['days_posted', 'Age', 46],
-                ['match_score', 'Match', 80],
-                ['contact_name', 'Contact', 120],
-                [null, 'Status', 90],
-                [null, 'Act.', 80],
+                ['role_title', 'Role', 170],
+                ['company', 'Company', 100],
+                ['type', 'Type', 80],
+                ['work_model', 'Location', 75],
+                ['days_posted', 'Age', 44],
+                ['match_score', 'Match', 76],
+                ['contact_name', 'Contact', 110],
+                [null, 'Status', 88],
+                [null, 'Act.', 78],
               ].map(([col, label, width]) => (
                 <th key={label} style={{ width, ...(label === 'Act.' ? { position: 'sticky', right: 0, background: 'var(--bg2)', zIndex: 2 } : {}) }} onClick={col ? () => handleSort(col) : undefined}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -481,7 +521,7 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={8} className="empty">No leads match your filters.</td></tr>
+              <tr><td colSpan={9} className="empty">No leads match your filters.</td></tr>
             )}
             {filtered.map(l => (
               <tr key={l.id}>
@@ -495,12 +535,8 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
                   {l.notes && <div style={{ fontSize: 10, color: 'var(--text3)', fontStyle: 'italic', marginTop: 2 }}>{l.notes}</div>}
                 </td>
                 <td style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{l.company}</td>
-                <td>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <span className={`pill pill-${l.type === 'Contract' ? 'contract' : 'ft'}`}>{l.type}</span>
-                    <span className={`pill pill-${l.work_model.toLowerCase().replace('-','').replace(' ','-')}`}>{l.work_model}</span>
-                  </div>
-                </td>
+                <td><span className={`pill pill-${l.type === 'Contract' ? 'contract' : 'ft'}`} style={{ fontSize: 9, whiteSpace: 'nowrap' }}>{l.type === 'Contract-to-Hire' ? 'CTH' : l.type}</span></td>
+                <td><span className={`pill pill-${l.work_model.toLowerCase().replace('-','').replace(' ','-')}`} style={{ fontSize: 9, whiteSpace: 'nowrap' }}>{l.work_model}</span></td>
                 <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: l.days_posted <= 7 ? 'var(--success)' : l.days_posted > 30 ? 'var(--warn)' : 'var(--text2)' }}>{l.days_posted}d</td>
                 <td>
                   <div className="score-bar">
@@ -509,7 +545,7 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
                   </div>
                 </td>
                 <td style={{ fontSize: 11 }}>
-                  <div style={{ fontWeight: 500, color: 'var(--text)' }}>{l.contact_name}</div>
+                  <div style={{ fontWeight: 500, color: 'var(--text)' }}>{l.contact_name || <span style={{ color: 'var(--text3)' }}>—</span>}</div>
                   {l.contact_email && <div style={{ color: 'var(--text3)', fontFamily: 'var(--font-mono)', fontSize: 10 }}>{l.contact_email}</div>}
                 </td>
                 <td>
@@ -530,6 +566,58 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
           </tbody>
         </table>
       </div>
+
+      {/* Add Lead Modal */}
+      {showAddLead && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={e => e.target === e.currentTarget && setShowAddLead(false)}>
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, width: 'min(560px, 95vw)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: 'var(--text)' }}>+ Add Lead Manually</div>
+            <div style={{ fontSize: 11, color: 'var(--accent)', background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 8, padding: '8px 12px', marginBottom: 16 }}>
+              Adding a lead triggers Agent 2 to search for similar roles at this company and nearby firms.
+            </div>
+            <div className="form-grid-2">
+              <div className="field"><label>Role title *</label><input type="text" placeholder="e.g. IT Project Manager" value={newLead.role_title} onChange={e => fl('role_title', e.target.value)} /></div>
+              <div className="field"><label>Company *</label><input type="text" placeholder="e.g. Kforce" value={newLead.company} onChange={e => fl('company', e.target.value)} /></div>
+              <div className="field"><label>Type</label>
+                <select value={newLead.type} onChange={e => fl('type', e.target.value)}>
+                  <option>Contract</option><option>Full-Time</option><option>Contract-to-Hire</option>
+                </select>
+              </div>
+              <div className="field"><label>Location / Work model</label>
+                <select value={newLead.work_model} onChange={e => fl('work_model', e.target.value)}>
+                  <option>Remote</option><option>Hybrid</option><option>On-site</option>
+                </select>
+              </div>
+              <div className="field"><label>Category</label>
+                <select value={newLead.category} onChange={e => fl('category', e.target.value)}>
+                  <option value="QA">QA / Testing</option><option value="BA">Business Analyst</option>
+                  <option value="PM">PM / Agile</option><option value="consulting">Consulting</option>
+                  <option value="govt">Government</option>
+                </select>
+              </div>
+              <div className="field"><label>Pay rate</label><input type="text" placeholder="e.g. $60-70/hr or $110K" value={newLead.pay_rate} onChange={e => fl('pay_rate', e.target.value)} /></div>
+              <div className="field"><label>Match score (0-100)</label><input type="number" min="0" max="100" value={newLead.match_score} onChange={e => fl('match_score', parseInt(e.target.value) || 80)} /></div>
+              <div className="field"><label>Days posted</label><input type="number" min="0" value={newLead.days_posted} onChange={e => fl('days_posted', parseInt(e.target.value) || 1)} /></div>
+            </div>
+            <div style={{ borderTop: '1px solid var(--border)', margin: '12px 0', paddingTop: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.06em' }}>Contact (recruiter / HR / hiring manager)</div>
+              <div className="form-grid-2">
+                <div className="field"><label>Name</label><input type="text" placeholder="e.g. Cole Withers" value={newLead.contact_name} onChange={e => fl('contact_name', e.target.value)} /></div>
+                <div className="field"><label>Email</label><input type="text" placeholder="e.g. cwithers@kforce.com" value={newLead.contact_email} onChange={e => fl('contact_email', e.target.value)} /></div>
+              </div>
+            </div>
+            <div className="field"><label>Apply link / URL</label><input type="text" placeholder="https://..." value={newLead.apply_link} onChange={e => fl('apply_link', e.target.value)} /></div>
+            <div className="field" style={{ marginBottom: 16 }}><label>Notes</label><textarea rows={2} placeholder="Any notes about this role..." value={newLead.notes} onChange={e => fl('notes', e.target.value)} /></div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn" onClick={() => setShowAddLead(false)}>Cancel</button>
+              <button className="btn btn-accent" onClick={handleAddLead} disabled={!newLead.role_title || !newLead.company}>
+                Add Lead + Trigger Search
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeRole && (
         <RoleActionPanel
