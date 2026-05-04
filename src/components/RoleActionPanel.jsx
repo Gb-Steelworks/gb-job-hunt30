@@ -53,6 +53,8 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
   const [step, setStep] = useState('variant')
   const [variant, setVariant] = useState(null)
   const [jd, setJd] = useState('')
+  const [jdFetching, setJdFetching] = useState(false)
+  const [jdFetched, setJdFetched] = useState(false)
   const [out, setOut] = useState({ ats: '', cover: '', qa: '' })
   const [loading, setLoading] = useState({ ats: false, cover: false, qa: false })
   const [copied, setCopied] = useState(null)
@@ -62,6 +64,25 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
   useEffect(() => {
     if (role) setVariant(suggestVariant(`${role.role_title} ${role.category || ''}`))
   }, [role])
+
+  // Auto-fetch JD when panel opens
+  useEffect(() => {
+    if (!role?.apply_link) return
+    setJdFetching(true)
+    setJdFetched(false)
+    claude(
+      'You are a job description extractor. Extract ONLY the job description text from the given URL — title, responsibilities, requirements, qualifications. Return plain text only. If you cannot access it, return exactly: "FETCH_FAILED"',
+      `Extract the job description from this posting URL: ${role.apply_link}`
+    )
+      .then(text => {
+        if (text && !text.includes('FETCH_FAILED') && text.length > 100) {
+          setJd(text.trim())
+          setJdFetched(true)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setJdFetching(false))
+  }, [role?.id])
 
   if (!role) return null
 
@@ -242,19 +263,36 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
           {step === 'ats' && (
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>ATS-Optimize Resume</div>
-              <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 12 }}>Paste the job description for best keyword matching (recommended).</div>
+
+              {/* JD fetch status banner */}
+              {jdFetching && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'rgba(0,153,255,0.08)', border: '1px solid rgba(0,153,255,0.2)', borderRadius: 'var(--radius)', marginBottom: 10, fontSize: 11, color: 'var(--accent2)' }}>
+                  <Loader size={11} className="spin" /> Fetching job description from posting...
+                </div>
+              )}
+              {jdFetched && !jdFetching && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'rgba(62,207,142,0.08)', border: '1px solid rgba(62,207,142,0.2)', borderRadius: 'var(--radius)', marginBottom: 10, fontSize: 11, color: 'var(--success)' }}>
+                  ✓ Job description auto-fetched — edit below if needed
+                </div>
+              )}
+              {!jdFetching && !jdFetched && (
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 10 }}>
+                  Paste the job description for best keyword matching (recommended).
+                </div>
+              )}
+
               <textarea
-                placeholder="Paste job description here..."
+                placeholder="Paste job description here, or wait for auto-fetch..."
                 value={jd}
                 onChange={e => setJd(e.target.value)}
-                rows={5}
+                rows={6}
                 style={{
-                  width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
+                  width: '100%', background: 'var(--bg)', border: `1px solid ${jdFetched ? 'rgba(62,207,142,0.3)' : 'var(--border)'}`,
                   borderRadius: 'var(--radius)', color: 'var(--text)', padding: '8px 10px',
-                  fontSize: 12, resize: 'vertical', marginBottom: 10, fontFamily: 'var(--font-sans)',
+                  fontSize: 11, resize: 'vertical', marginBottom: 10, fontFamily: 'var(--font-mono)',
                 }}
               />
-              <button className="btn btn-accent" style={{ width: '100%', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={() => run('ats')} disabled={loading.ats}>
+              <button className="btn btn-accent" style={{ width: '100%', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={() => run('ats')} disabled={loading.ats || jdFetching}>
                 {loading.ats ? <><Loader size={12} className="spin" /> Optimizing...</> : '✨ Optimize Bullets for This Role'}
               </button>
               {out.ats && <OutputBox text={out.ats} label="Optimized bullets" copyKey="ats" copied={copied} onCopy={copy} />}
