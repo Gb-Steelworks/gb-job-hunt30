@@ -1,39 +1,45 @@
-// api/claude.js
-// Vercel serverless function — proxies requests to Anthropic API
-// Keeps your API key server-side and handles CORS
+// api/claude.js — CommonJS format for Vercel Node runtime
  
-export default async function handler(req, res) {
-  // CORS headers
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
  
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end()
-  }
- 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end()
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
  
   const apiKey = process.env.ANTHROPIC_API_KEY
+ 
+  // Debug: return all env var keys so we can see what's available
   if (!apiKey) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured in Vercel environment variables' })
+    return res.status(500).json({ 
+      error: 'Missing ANTHROPIC_API_KEY',
+      availableKeys: Object.keys(process.env).filter(k => !k.includes('SECRET') && !k.includes('TOKEN')).join(', ')
+    })
+  }
+ 
+  let body
+  try {
+    body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid JSON body' })
   }
  
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const upstream = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify(body),
     })
  
-    const data = await response.json()
-    return res.status(response.status).json(data)
+    const text = await upstream.text()
+    res.setHeader('Content-Type', 'application/json')
+    return res.status(upstream.status).send(text)
+ 
   } catch (err) {
     return res.status(500).json({ error: err.message })
   }
