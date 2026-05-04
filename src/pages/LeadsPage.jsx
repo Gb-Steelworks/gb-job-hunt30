@@ -1,6 +1,14 @@
+// LeadsPage.jsx — UPDATED
+// Changes from original:
+//   1. Imports RoleActionPanel
+//   2. "Prep ↗" button opens the panel for that lead
+//   3. onApplied handler auto-creates an application entry (passed up via prop or stored locally)
+//   4. Everything else identical to your original
+
 import { useState } from 'react'
 import { ExternalLink, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { supabase } from '../lib/supabase.js'
+import RoleActionPanel from '../components/RoleActionPanel.jsx'
 
 const SEED_LEADS = [
   { id: 1, role_title: 'IT QA Specialist IV', company: 'Enbridge / Raise', via: 'Raise Recruiting', category: 'QA', type: 'Contract', work_model: 'Hybrid', pay_rate: '$54–57/hr W2', days_posted: 26, match_score: 95, contact_name: 'Raise Recruiting', contact_email: 'hello@raiserecruiting.com', status: 'New', apply_link: 'https://www.glassdoor.com/job-listing/it-quality-assurance-specialist-iv-houston-tx-hybrid-enbridge-JV_IC1140171_KO0,52_KE53,61.htm?jl=1010015454937' },
@@ -23,7 +31,7 @@ function SortIcon({ col, sortCol, sortDir }) {
 function scoreColor(s) { return s >= 90 ? 'var(--success)' : s >= 80 ? 'var(--warn)' : 'var(--text3)' }
 function scoreBg(s) { return s >= 90 ? 'var(--success)' : s >= 80 ? 'var(--warn)' : 'var(--text3)' }
 
-export default function LeadsPage() {
+export default function LeadsPage({ onApplicationLogged }) {
   const [leads, setLeads] = useState(SEED_LEADS)
   const [search, setSearch] = useState('')
   const [fType, setFType] = useState('')
@@ -32,6 +40,7 @@ export default function LeadsPage() {
   const [fStatus, setFStatus] = useState('')
   const [sortCol, setSortCol] = useState('match_score')
   const [sortDir, setSortDir] = useState('desc')
+  const [activeRole, setActiveRole] = useState(null)   // ← NEW
 
   const handleSort = (col) => {
     if (sortCol === col) setSortDir(d => d === 'desc' ? 'asc' : 'desc')
@@ -40,6 +49,15 @@ export default function LeadsPage() {
 
   const updateStatus = (id, val) => {
     setLeads(leads.map(l => l.id === id ? { ...l, status: val } : l))
+  }
+
+  // Called when user clicks "Mark as Applied" in RoleActionPanel
+  const handleApplied = (appData) => {
+    // Update lead status to Applied
+    setLeads(prev => prev.map(l => l.id === appData.id ? { ...l, status: 'Applied' } : l))
+    // Bubble up to App so ApplicationsPage can receive it
+    onApplicationLogged?.(appData)
+    setActiveRole(null)
   }
 
   const filtered = leads
@@ -124,7 +142,7 @@ export default function LeadsPage() {
                 ['match_score', 'Match', 90],
                 ['contact_name', 'Contact', 130],
                 [null, 'Status', 96],
-                [null, 'Actions', 110],
+                [null, 'Actions', 120],
               ].map(([col, label, width]) => (
                 <th key={label} style={{ width }} onClick={col ? () => handleSort(col) : undefined}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -165,7 +183,8 @@ export default function LeadsPage() {
                 </td>
                 <td>
                   <div style={{ display: 'flex', gap: 4 }}>
-                    <button className="btn btn-sm btn-accent">Prep ↗</button>
+                    {/* UPDATED: opens RoleActionPanel */}
+                    <button className="btn btn-sm btn-accent" onClick={() => setActiveRole(l)}>Prep ↗</button>
                     <a href={l.apply_link} target="_blank" rel="noopener noreferrer">
                       <button className="btn btn-sm"><ExternalLink size={10} /></button>
                     </a>
@@ -176,6 +195,15 @@ export default function LeadsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Role Action Panel — renders when a lead is selected */}
+      {activeRole && (
+        <RoleActionPanel
+          role={activeRole}
+          onClose={() => setActiveRole(null)}
+          onApplied={handleApplied}
+        />
+      )}
     </div>
   )
 }
