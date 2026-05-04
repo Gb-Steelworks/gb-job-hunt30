@@ -13,7 +13,7 @@ const SEED_LEADS = [
     pay_rate: '$54–57/hr W2', days_posted: 26, match_score: 95,
     contact_name: 'Raise Recruiting', contact_email: 'hello@raiserecruiting.com',
     status: 'New', notes: '',
-    apply_link: 'https://www.glassdoor.com/job-listing/it-quality-assurance-specialist-iv-houston-tx-hybrid-enbridge-JV_IC1140171_KO0,52_KE53,61.htm?jl=1010015454937'
+    apply_link: 'https://raiserecruiting.com/job-postings/?s=enbridge+QA'
   },
   {
     id: 2, role_title: 'Business Analyst III', company: 'TEKsystems',
@@ -61,7 +61,7 @@ const SEED_LEADS = [
     pay_rate: 'TBD', days_posted: 30, match_score: 80,
     contact_name: 'Grenza HR', contact_email: '',
     status: 'New', notes: '',
-    apply_link: 'https://www.indeed.com/q-grenza-l-houston,-tx-jobs.html'
+    apply_link: 'http://www.grenza.com/index.php/ct-careers'
   },
   {
     id: 8, role_title: 'QA Testing Analyst', company: 'ESP Enterprises',
@@ -69,7 +69,7 @@ const SEED_LEADS = [
     pay_rate: 'TBD', days_posted: 21, match_score: 78,
     contact_name: 'ESP HR', contact_email: '',
     status: 'New', notes: '',
-    apply_link: 'https://www.indeed.com/cmp/Esp-Enterprises,-Inc./jobs/l-Houston,-TX'
+    apply_link: 'https://espusa.com/careers/'
   },
   // ── AGENT 1: New leads from May 4 run ─────────────────────────────────────
   {
@@ -78,7 +78,7 @@ const SEED_LEADS = [
     pay_rate: '$65–70/hr', days_posted: 5, match_score: 94,
     contact_name: 'Kforce Houston', contact_email: '',
     status: 'New', notes: 'Epics, user stories, SOPs, data architecture. Strong George match.',
-    apply_link: 'https://www.linkedin.com/jobs/view/agile-data-management-business-analyst-at-kforce-inc-3459393798'
+    apply_link: 'https://www.kforce.com/find-work/search-jobs/?keyword=business+analyst+houston'
   },
   {
     id: 10, role_title: 'Business Analyst / Product Owner', company: 'Kforce',
@@ -86,7 +86,7 @@ const SEED_LEADS = [
     pay_rate: 'TBD', days_posted: 8, match_score: 92,
     contact_name: 'Kforce Recruiting', contact_email: '',
     status: 'New', notes: 'Requirements mgmt, change mgmt, stakeholder coordination.',
-    apply_link: 'https://www.dice.com/job-detail/48799909-f9ef-4105-810a-bdec9670d6a0'
+    apply_link: 'https://www.kforce.com/find-work/search-jobs/?keyword=product+owner+houston'
   },
   {
     id: 11, role_title: 'Senior Business Analyst / QA Lead', company: 'Conviso Inc.',
@@ -94,7 +94,7 @@ const SEED_LEADS = [
     pay_rate: 'TBD', days_posted: 10, match_score: 96,
     contact_name: 'Conviso Recruiting', contact_email: '',
     status: 'New', notes: 'Dual BA/QA Lead role — George is a perfect fit. Delegate to PM.',
-    apply_link: 'https://jooble.org/jobs-remote-quality-assurance/Houston,-TX'
+    apply_link: 'https://www.linkedin.com/jobs/search/?keywords=senior+business+analyst+QA+lead+remote'
   },
   {
     id: 12, role_title: 'QA Lead / Test Engineer — Healthcare AI', company: 'Undisclosed (Dallas TX)',
@@ -102,7 +102,7 @@ const SEED_LEADS = [
     pay_rate: '$55–75/hr', days_posted: 6, match_score: 88,
     contact_name: 'ZipRecruiter Posting', contact_email: '',
     status: 'New', notes: 'Dallas TX based, remote ok. CST time zone required.',
-    apply_link: 'https://www.ziprecruiter.com/Jobs/Remote-Qa-Lead'
+    apply_link: 'https://www.linkedin.com/jobs/search/?keywords=QA+lead+test+engineer+remote+dallas+texas'
   },
   {
     id: 13, role_title: 'Salesforce QA Analyst', company: 'Insight Global (FSI Client)',
@@ -110,7 +110,7 @@ const SEED_LEADS = [
     pay_rate: 'TBD', days_posted: 4, match_score: 84,
     contact_name: 'Insight Global Houston', contact_email: '',
     status: 'New', notes: '6 months+, Agile delivery team, Salesforce CRM + Experience Cloud.',
-    apply_link: 'https://www.dice.com/jobs/q-qa-l-Houston,+TX-jobs'
+    apply_link: 'https://www.insightglobal.com/jobs/?search=salesforce+QA+analyst+remote'
   },
   {
     id: 14, role_title: 'CM/QA Specialist — Mission Critical Systems', company: 'SAIC',
@@ -118,7 +118,7 @@ const SEED_LEADS = [
     pay_rate: 'TBD', days_posted: 90, match_score: 82,
     contact_name: 'SAIC Talent Acquisition', contact_email: '',
     status: 'New', notes: 'Houston TX. Public Trust clearance required. Dual CM/QA role.',
-    apply_link: 'https://www.dice.com/jobs/q-qa-l-Houston,+TX-jobs'
+    apply_link: 'https://jobs.saic.com/jobs?keywords=quality+assurance+houston'
   },
   {
     id: 15, role_title: 'Senior Quality Analyst (Agile/Scrum)', company: 'Crowe LLP',
@@ -126,7 +126,7 @@ const SEED_LEADS = [
     pay_rate: 'TBD', days_posted: 12, match_score: 86,
     contact_name: 'Crowe LLP Recruiting', contact_email: '',
     status: 'New', notes: 'The Woodlands TX. Agile/Scrum team. SQL + QA best practices.',
-    apply_link: 'https://www.indeed.com/q-remote-qa-l-houston,-tx-jobs.html'
+    apply_link: 'https://www.crowe.com/careers/job-search?keyword=quality+analyst'
   },
   // ── AGENT 2: FSI + Boutique TX Consulting ─────────────────────────────────
   {
