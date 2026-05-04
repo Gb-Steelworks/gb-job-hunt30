@@ -2,6 +2,7 @@
 // Drop into src/components/
 // Triggered by "Prep ↗" button in LeadsPage. Pass the lead object as `role` prop.
 // Calls Anthropic API for ATS optimization, cover letter, Q&A.
+//
 
 import { useState, useEffect, useRef } from 'react'
 import { X, Copy, Check, ChevronRight, Loader } from 'lucide-react'
