@@ -1,12 +1,8 @@
-//
 // AgentsPage.jsx — LIVE AGENTS v3
-// Calls Anthropic API directly from browser using VITE_ANTHROPIC_API_KEY
-// Add VITE_ANTHROPIC_API_KEY to Vercel env vars (must start with VITE_ to be exposed to browser)
+// Calls /api/claude proxy on Vercel — keeps API key server-side
 
 import { useState } from 'react'
 import { Bot, Clock, Zap, Mail, Loader, AlertCircle } from 'lucide-react'
-
-const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || ''
 
 const GEORGE_PROFILE = `Candidate: George Brooks, Houston TX
 Target roles (priority order):
@@ -35,15 +31,9 @@ const AUTOMATION = [
 ]
 
 async function runAgentCall(agentName, sources, extra) {
-  if (!ANTHROPIC_KEY) throw new Error('VITE_ANTHROPIC_API_KEY not set in Vercel environment variables')
-
   const res = await fetch('/api/claude', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_KEY,
-      'anthropic-version': '2023-06-01',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
@@ -51,7 +41,6 @@ async function runAgentCall(agentName, sources, extra) {
       messages: [{ role: 'user', content: `${agentName}: Search for roles matching this candidate.\n\n${GEORGE_PROFILE}\n\nSources: ${sources.join(', ')}\n${extra}\n\nReturn 6-8 realistic specific leads. Use real company names, real recruiter names where known, real URLs. Vary across QA/BA/PM. Score 75-98.` }]
     })
   })
-
   const data = await res.json()
   if (data.error) throw new Error(typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error)))
   const text = data.content?.map(b => b.text || '').join('') || '[]'
@@ -105,14 +94,6 @@ export default function AgentsPage({ onLeadsFound }) {
         <div className="page-title">Agents</div>
         <div className="page-sub">AI agents that search, verify, and prepare your applications · New leads appear instantly in Job Leads after each run</div>
       </div>
-
-      {!ANTHROPIC_KEY && (
-        <div className="card" style={{ marginBottom: 16, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)' }}>
-          <div style={{ fontSize: 12, color: '#f87171' }}>
-            ⚠️ <strong>VITE_ANTHROPIC_API_KEY not set.</strong> Add it to Vercel → Project Settings → Environment Variables, then redeploy.
-          </div>
-        </div>
-      )}
 
       <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
         {AGENTS.map(a => {
