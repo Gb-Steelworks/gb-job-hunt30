@@ -34,7 +34,7 @@ Results: $10M+ regulatory risk mitigation, 90% faster system resolution, $200K r
 30% faster testing cycles, 50% faster incident resolution, 35-40% fraud reduction (IRS 651M users).`
 
 async function claude(system, user) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('/api/claude', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
