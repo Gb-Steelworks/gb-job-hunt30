@@ -20,7 +20,7 @@ Key employers: JPMC, Capco, Deloitte, Makpar/IRS, Supply Bistro
 Certs: CSM, SAFe POPM, PMP (exp Jun 2026), Azure, Gen AI
 Tools: JIRA, Confluence, Power BI, Selenium, Smartsheet, Azure`
 
-const SOURCES_AGENT1 = ['TekSystems Houston','The Judge Group','Insight Global','Kforce','Modis / Experis','LinkedIn Jobs','Indeed','Dice','Glassdoor','CyberCoders']
+const SOURCES_AGENT1 = ['TekSystems Houston','TekSystems Dallas','TekSystems Austin','The Judge Group','Insight Global','Kforce Houston','Kforce Dallas','Kforce Austin','Modis / Experis','LinkedIn Jobs','Indeed','Glassdoor','CyberCoders']
 const SOURCES_AGENT2 = ['JP Morgan Chase','Wells Fargo','USAA','Charles Schwab','Fidelity','Frost Bank','Slalom Consulting','West Monroe Partners','Pariveda Solutions','Capco Consulting','Huron Consulting','Opportune LLP','Deloitte','City of Houston (governmentjobs.com/careers/houston)','Harris County (governmentjobs.com/careers/harriscountytx)','State of Texas (capps.taleo.net)']
 
 const AUTOMATION = [
@@ -30,7 +30,7 @@ const AUTOMATION = [
   { label: 'Option D — Email trigger (Agent 3)', detail: 'Send yourself an email: subject "APPLY: [Role] at [Company]" with JD in body. Automation fires Agent 3 and emails back your full prep package.', effort: '30 min setup' },
 ]
 
-async function runAgentCall(agentName, sources, extra) {
+async function runAgentCall(agentName, sources, finalExtra) {
   const res = await fetch('/api/claude', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -47,7 +47,7 @@ async function runAgentCall(agentName, sources, extra) {
   return JSON.parse(text.replace(/```json|```/g, '').trim())
 }
 
-export default function AgentsPage({ onLeadsFound }) {
+export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
   const [states, setStates] = useState({
     1: { status: 'idle', lastRun: 'May 3, 2026 · Manual run', leadsFound: 8, log: [] },
     2: { status: 'idle', lastRun: 'May 3, 2026 · Manual run', leadsFound: 0, log: [] },
@@ -63,9 +63,11 @@ export default function AgentsPage({ onLeadsFound }) {
     addLog(id, 'Starting scan...')
     try {
       const sources = id === 1 ? SOURCES_AGENT1 : SOURCES_AGENT2
-      const extra = id === 2 ? 'Focus FSI firms and boutique TX consulting. Find hiring manager names where possible.' : 'Focus staffing firms and job boards. Include pay rates where known.'
+      const extra = id === 2 ? 'Focus FSI firms and boutique TX consulting. Find hiring manager names where possible.' : 'Focus staffing firms and job boards. Include pay rates where known. Include Dallas TX and Austin TX roles, not just Houston.'
+      const patternContext = extraPatterns.length > 0 ? `\n\nAlso prioritize roles similar to: ${extraPatterns.map(p => p.role_title + ' at ' + p.company).join(', ')}` : ''
+      const finalExtra = extra + patternContext
       addLog(id, `Searching ${sources.length} sources...`)
-      const leads = await runAgentCall(id === 1 ? 'Agent 1 — Job Scout' : 'Agent 2 — FSI & Boutique Spotter', sources, extra)
+      const leads = await runAgentCall(id === 1 ? 'Agent 1 — Job Scout' : 'Agent 2 — FSI & Boutique Spotter', sources, finalExtra)
       const stamped = leads.map((l, i) => ({ ...l, id: Date.now() + i }))
       setStates(prev => ({
         ...prev, [id]: {
@@ -83,9 +85,9 @@ export default function AgentsPage({ onLeadsFound }) {
   }
 
   const AGENTS = [
-    { id: 1, name: 'Agent 1 — Job Scout', icon: Bot, color: 'var(--accent)', desc: `Searches ${SOURCES_AGENT1.slice(0,5).join(', ')} + more for QA · BA · PM · Agile roles in Texas + remote.`, cadence: 'Every 48 hours' },
-    { id: 2, name: 'Agent 2 — FSI & Boutique Spotter', icon: Zap, color: 'var(--accent2)', desc: 'Searches FSI firms (JPMC, Wells, USAA, Schwab, Fidelity, Frost) and boutique TX consulting firms (Slalom, West Monroe, Pariveda, Capco, Opportune) directly on their career pages.', cadence: 'Every 48 hours' },
-    { id: 3, name: 'Agent 3 — Application Prep', icon: Mail, color: 'var(--warn)', desc: 'Triggered per-role via the "Prep ↗" button on any lead. ATS-optimizes your resume, writes a cover letter, and generates recruiter Q&A prep.', cadence: 'Per-role trigger' },
+    { id: 1, name: 'Agent 1 — Job Scout', icon: Bot, color: 'var(--accent)', desc: `Searches ${SOURCES_AGENT1.slice(0,5).join(', ')} + more for QA · BA · PM · Agile roles in Houston · Dallas · Austin · Remote.`, cadence: 'Manual run — click Run below' },
+    { id: 2, name: 'Agent 2 — FSI & Boutique Spotter', icon: Zap, color: 'var(--accent2)', desc: 'Searches FSI firms (JPMC, Wells, USAA, Schwab, Fidelity, Frost) and boutique TX consulting firms (Slalom, West Monroe, Pariveda, Capco, Opportune) + City of Houston, Harris County, State of TX directly on their career pages.', cadence: 'Manual run — click Run below' },
+    { id: 3, name: 'Agent 3 — Application Prep', icon: Mail, color: 'var(--warn)', desc: 'Triggered per-role via the "Prep" button on any lead. ATS-optimizes your resume, writes a cover letter, and generates recruiter Q&A prep.', cadence: 'Per-role trigger via Prep button' },
   ]
 
   return (
