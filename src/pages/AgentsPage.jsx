@@ -1,9 +1,11 @@
-// AgentsPage.jsx — LIVE AGENTS
-// Agent 1 + 2 now actually call the Claude API and return structured leads
-// that get passed up to App.jsx → LeadsPage via onLeadsFound prop
+// AgentsPage.jsx — LIVE AGENTS v2
+// Calls Anthropic API directly from browser using VITE_ANTHROPIC_API_KEY
+// Add VITE_ANTHROPIC_API_KEY to Vercel env vars (must start with VITE_ to be exposed to browser)
 
 import { useState } from 'react'
 import { Bot, Clock, Zap, Mail, Loader, AlertCircle } from 'lucide-react'
+
+const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || ''
 
 const GEORGE_PROFILE = `Candidate: George Brooks, Houston TX
 Target roles (priority order):
@@ -26,15 +28,21 @@ const SOURCES_AGENT2 = ['JP Morgan Chase','Wells Fargo','USAA','Charles Schwab',
 
 const AUTOMATION = [
   { label: 'Option A — Manual reminder', detail: 'Set a phone alarm every Mon/Wed/Fri at 8 AM. Open this app and click Run on Agent 1 + 2. Takes 2 minutes.', effort: 'Zero setup' },
-  { label: 'Option B — Make.com scheduler', detail: 'Free tier. Build the scenario from make_scenario_agents_1_2.json. Fires automatically every 48h at 8 AM CT, emails you a digest.', effort: '30 min setup' },
-  { label: 'Option C — n8n (self-hosted)', detail: 'Free, open source, schedulable. Call Claude API every 48h, write results to Supabase + email. More control, more setup.', effort: '2hr setup' },
-  { label: 'Option D — Email trigger (Agent 3)', detail: 'Send yourself an email: subject "APPLY: [Role] at [Company]" with JD in body. Make.com fires Agent 3 and emails back your full prep package.', effort: '30 min setup' },
+  { label: 'Option B — Make.com scheduler', detail: 'Free tier. Build a scenario that fires automatically every 48h at 8 AM CT and emails you a digest.', effort: '30 min setup' },
+  { label: 'Option C — n8n (self-hosted)', detail: 'Free, open source, schedulable. Call Claude API every 48h, write results to Supabase + email.', effort: '2hr setup' },
+  { label: 'Option D — Email trigger (Agent 3)', detail: 'Send yourself an email: subject "APPLY: [Role] at [Company]" with JD in body. Automation fires Agent 3 and emails back your full prep package.', effort: '30 min setup' },
 ]
 
 async function runAgentCall(agentName, sources, extra) {
-  const res = await fetch('/api/claude', {
+  if (!ANTHROPIC_KEY) throw new Error('VITE_ANTHROPIC_API_KEY not set in Vercel environment variables')
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_KEY,
+      'anthropic-version': '2023-06-01',
+    },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
@@ -42,8 +50,9 @@ async function runAgentCall(agentName, sources, extra) {
       messages: [{ role: 'user', content: `${agentName}: Search for roles matching this candidate.\n\n${GEORGE_PROFILE}\n\nSources: ${sources.join(', ')}\n${extra}\n\nReturn 6-8 realistic specific leads. Use real company names, real recruiter names where known, real URLs. Vary across QA/BA/PM. Score 75-98.` }]
     })
   })
+
   const data = await res.json()
-  if (data.error) throw new Error(data.error.message)
+  if (data.error) throw new Error(typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error)))
   const text = data.content?.map(b => b.text || '').join('') || '[]'
   return JSON.parse(text.replace(/```json|```/g, '').trim())
 }
@@ -55,21 +64,19 @@ export default function AgentsPage({ onLeadsFound }) {
     3: { status: 'waiting', lastRun: 'Never', leadsFound: null, log: [] },
   })
 
-  const log = (id, msg) => setStates(prev => ({
-    ...prev, [id]: { ...prev[id], log: [...prev[id].log, `${new Date().toLocaleTimeString()} — ${msg}` ] }
+  const addLog = (id, msg) => setStates(prev => ({
+    ...prev, [id]: { ...prev[id], log: [...prev[id].log, `${new Date().toLocaleTimeString()} — ${msg}`] }
   }))
 
   const runAgent = async (id) => {
     setStates(prev => ({ ...prev, [id]: { ...prev[id], status: 'running', log: [] } }))
-    const addLog = (msg) => log(id, msg)
-    addLog('Starting scan...')
+    addLog(id, 'Starting scan...')
     try {
       const sources = id === 1 ? SOURCES_AGENT1 : SOURCES_AGENT2
       const extra = id === 2 ? 'Focus FSI firms and boutique TX consulting. Find hiring manager names where possible.' : 'Focus staffing firms and job boards. Include pay rates where known.'
-      addLog(`Searching ${sources.length} sources...`)
+      addLog(id, `Searching ${sources.length} sources...`)
       const leads = await runAgentCall(id === 1 ? 'Agent 1 — Job Scout' : 'Agent 2 — FSI & Boutique Spotter', sources, extra)
       const stamped = leads.map((l, i) => ({ ...l, id: Date.now() + i }))
-      addLog(`✅ Done — ${leads.length} leads sent to Job Leads`)
       setStates(prev => ({
         ...prev, [id]: {
           ...prev[id], status: 'idle',
@@ -80,15 +87,15 @@ export default function AgentsPage({ onLeadsFound }) {
       }))
       onLeadsFound?.(stamped)
     } catch (e) {
-      addLog(`❌ Error: ${e.message}`)
+      addLog(id, `❌ Error: ${e.message}`)
       setStates(prev => ({ ...prev, [id]: { ...prev[id], status: 'error' } }))
     }
   }
 
   const AGENTS = [
-    { id: 1, name: 'Agent 1 — Job Scout', icon: Bot, color: 'var(--accent)', desc: `Searches ${SOURCES_AGENT1.slice(0,5).join(', ')} + more for QA · BA · PM · Agile roles in Texas + remote. Returns structured leads with contact, pay rate, days posted, and apply link.`, cadence: 'Every 48 hours' },
+    { id: 1, name: 'Agent 1 — Job Scout', icon: Bot, color: 'var(--accent)', desc: `Searches ${SOURCES_AGENT1.slice(0,5).join(', ')} + more for QA · BA · PM · Agile roles in Texas + remote.`, cadence: 'Every 48 hours' },
     { id: 2, name: 'Agent 2 — FSI & Boutique Spotter', icon: Zap, color: 'var(--accent2)', desc: 'Searches FSI firms (JPMC, Wells, USAA, Schwab, Fidelity, Frost) and boutique TX consulting firms (Slalom, West Monroe, Pariveda, Capco, Opportune) directly on their career pages.', cadence: 'Every 48 hours' },
-    { id: 3, name: 'Agent 3 — Application Prep', icon: Mail, color: 'var(--warn)', desc: 'Triggered per-role via the "Prep ↗" button on any lead. ATS-optimizes your resume, writes a cover letter, and generates recruiter Q&A prep — all in one slide-in panel.', cadence: 'Per-role trigger' },
+    { id: 3, name: 'Agent 3 — Application Prep', icon: Mail, color: 'var(--warn)', desc: 'Triggered per-role via the "Prep ↗" button on any lead. ATS-optimizes your resume, writes a cover letter, and generates recruiter Q&A prep.', cadence: 'Per-role trigger' },
   ]
 
   return (
@@ -97,6 +104,14 @@ export default function AgentsPage({ onLeadsFound }) {
         <div className="page-title">Agents</div>
         <div className="page-sub">AI agents that search, verify, and prepare your applications · New leads appear instantly in Job Leads after each run</div>
       </div>
+
+      {!ANTHROPIC_KEY && (
+        <div className="card" style={{ marginBottom: 16, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)' }}>
+          <div style={{ fontSize: 12, color: '#f87171' }}>
+            ⚠️ <strong>VITE_ANTHROPIC_API_KEY not set.</strong> Add it to Vercel → Project Settings → Environment Variables, then redeploy.
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
         {AGENTS.map(a => {
