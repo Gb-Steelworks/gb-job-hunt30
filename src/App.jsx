@@ -24,6 +24,7 @@ export default function App() {
   const [page, setPage] = useState('dashboard')
   const [pendingApps, setPendingApps] = useState([])
   const [agentLeads, setAgentLeads] = useState([])
+  const [companyFilter, setCompanyFilter] = useState('')
 
   const handleApplicationLogged = (appData) => {
     setPendingApps(prev => prev.find(a => a.id === appData.id) ? prev : [...prev, appData])
@@ -40,9 +41,9 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'dashboard':    return <DashboardPage onNavigate={setPage} />
-      case 'leads':        return <LeadsPage onApplicationLogged={handleApplicationLogged} agentLeads={agentLeads} />
+      case 'leads':        return <LeadsPage onApplicationLogged={handleApplicationLogged} agentLeads={agentLeads} initialCompanyFilter={companyFilter} onClearCompanyFilter={() => setCompanyFilter('')} />
       case 'applications': return <ApplicationsPage pendingApplications={pendingApps} />
-      case 'companies':    return <CompaniesPage />
+      case 'companies':    return <CompaniesPage onNavigate={(page, companyFilter) => { if (companyFilter) setCompanyFilter(companyFilter); setPage(page) }} />
       case 'linkedin':     return <LinkedInPage />
       case 'agents':       return <AgentsPage onLeadsFound={handleLeadsFound} />
       case 'vault':        return <ResumeVaultPage />
