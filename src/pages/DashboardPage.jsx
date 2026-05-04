@@ -1,13 +1,13 @@
 import { Zap, ArrowRight } from 'lucide-react'
 
-const DAYS_LEFT = Math.max(0, Math.ceil((new Date('2026-05-31') - new Date()) / (1000 * 60 * 60 * 24)))
+const DAYS_LEFT = Math.max(0, Math.ceil((new Date('2026-06-03') - new Date()) / (1000 * 60 * 60 * 24)))
 
 const STATS = [
   { label: 'Leads found', val: 8, delta: 'From 2 agent runs', cls: 'accent' },
   { label: 'Applied', val: 0, delta: '—', cls: '' },
   { label: 'In progress', val: 0, delta: '—', cls: '' },
   { label: 'Interviews', val: 0, delta: '—', cls: '' },
-  { label: 'Days left', val: DAYS_LEFT, delta: 'Until May 31', cls: 'warn' },
+  { label: 'Days left', val: DAYS_LEFT, delta: 'Until June 3', cls: 'warn' },
 ]
 
 const RECENT = [
@@ -29,7 +29,7 @@ export default function DashboardPage({ onNavigate }) {
     <div className="page">
       <div className="page-header">
         <div className="page-title">Command Center</div>
-        <div className="page-sub">Target: Contract or FT by May 31 · QA · BA · PM · Agile · Product Manager</div>
+        <div className="page-sub">Target: Contract or FT by June 3 · QA · BA · PM · Agile · Product Manager</div>
       </div>
 
       <div className="stats-row">

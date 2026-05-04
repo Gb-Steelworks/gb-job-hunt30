@@ -5,7 +5,7 @@
 //   3. onApplied handler auto-creates an application entry (passed up via prop or stored locally)
 //   4. Everything else identical to your original
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ExternalLink, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { supabase } from '../lib/supabase.js'
 import RoleActionPanel from '../components/RoleActionPanel.jsx'
@@ -31,8 +31,11 @@ function SortIcon({ col, sortCol, sortDir }) {
 function scoreColor(s) { return s >= 90 ? 'var(--success)' : s >= 80 ? 'var(--warn)' : 'var(--text3)' }
 function scoreBg(s) { return s >= 90 ? 'var(--success)' : s >= 80 ? 'var(--warn)' : 'var(--text3)' }
 
-export default function LeadsPage({ onApplicationLogged }) {
-  const [leads, setLeads] = useState(SEED_LEADS)
+export default function LeadsPage({ onApplicationLogged, agentLeads = [] }) {
+  const [leads, setLeads] = useState(() => {
+    // Merge seed + any agent leads already in state
+    return SEED_LEADS
+  })
   const [search, setSearch] = useState('')
   const [fType, setFType] = useState('')
   const [fModel, setFModel] = useState('')
@@ -40,7 +43,16 @@ export default function LeadsPage({ onApplicationLogged }) {
   const [fStatus, setFStatus] = useState('')
   const [sortCol, setSortCol] = useState('match_score')
   const [sortDir, setSortDir] = useState('desc')
-  const [activeRole, setActiveRole] = useState(null)   // ← NEW
+  const [activeRole, setActiveRole] = useState(null)
+
+  // Merge new leads from agents when they arrive
+  useEffect(() => {
+    if (!agentLeads.length) return
+    setLeads(prev => {
+      const ids = new Set(prev.map(l => l.id))
+      return [...prev, ...agentLeads.filter(l => !ids.has(l.id))]
+    })
+  }, [agentLeads])   // ← NEW
 
   const handleSort = (col) => {
     if (sortCol === col) setSortDir(d => d === 'desc' ? 'asc' : 'desc')
