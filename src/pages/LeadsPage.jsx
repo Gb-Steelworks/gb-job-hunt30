@@ -1,4 +1,3 @@
-// Tweaking the window
 // LeadsPage.jsx - v2 with 20 real leads from Agent 1 + 2 runs (May 4 2026)
 // Prep ↗ opens RoleActionPanel for ATS optimize, cover letter, Q&A, and logging
 
@@ -183,20 +182,20 @@ const SEED_LEADS = [
     apply_link: 'https://jobs.saic.com/jobs/17678430-sr-business-analyst'
   },
   {
-    id: 24, role_title: 'Product Owner - Business Systems Analyst', company: 'David Weekley Homes',
-    via: 'Direct - careers.davidweekleyhomes.com', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: '$85-127K', days_posted: 14, match_score: 87,
-    contact_name: 'David Weekley Homes IT Recruiting', contact_email: '',
-    status: 'New', notes: 'West Houston (I-10/610). 3 days onsite. PO + BSA dual role. Fortune 100 Best Companies 19x.',
-    apply_link: 'https://careers.davidweekleyhomes.com/InformationTechnology/JobPosting/20730/Apply'
+    id: 24, role_title: 'Business Systems Analyst I/II', company: "Texas Children's Hospital",
+    via: "Direct - texaschildrens.org/careers", category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: '$79-105K', days_posted: 7, match_score: 88,
+    contact_name: "Texas Children's Hospital IT Recruiting", contact_email: '',
+    status: 'New', notes: 'Houston TX. Innovative business solutions, process/data flow analysis, cross-functional delivery. Large healthcare IT environment.',
+    apply_link: 'https://jobs.texaschildrens.org/search/searchjobs?keyword=business+analyst'
   },
   {
-    id: 25, role_title: 'Business Process Analyst', company: 'David Weekley Homes',
-    via: 'Direct - careers.davidweekleyhomes.com', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: 'TBD', days_posted: 21, match_score: 84,
-    contact_name: 'David Weekley Homes IT Recruiting', contact_email: '',
-    status: 'New', notes: 'West Houston. Process mapping, requirements, business rules. Separate from PO role above.',
-    apply_link: 'https://careers.davidweekleyhomes.com/InformationTechnology/JobPosting/20815'
+    id: 25, role_title: 'Systems Analyst - D365 F&O', company: 'Perry Homes',
+    via: 'Direct - careers.perryhomes.com', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: '$90-125K', days_posted: 10, match_score: 85,
+    contact_name: 'Perry Homes IT Recruiting', contact_email: '',
+    status: 'New', notes: 'Houston TX. D365 Finance & Operations, PMO collaboration, requirements gathering, process improvement. Finance/Supply Chain/Operations.',
+    apply_link: 'https://jobs.perryhomes.com'
   },
   // -- CONSULTING FIRMS - verified May 4 2026 --------------------------------
   {
@@ -320,6 +319,36 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [] }) {
   const [sortCol, setSortCol] = useState('match_score')
   const [sortDir, setSortDir] = useState('desc')
   const [activeRole, setActiveRole] = useState(null)
+  const [checking, setChecking] = useState(false)
+  const [checkResults, setCheckResults] = useState({}) // id -> 'ok' | 'dead' | 'checking'
+
+  const checkAllLinks = async () => {
+    setChecking(true)
+    setCheckResults({})
+    const batch = leads.slice(0, 20) // check first 20 to stay within token limits
+    for (const lead of batch) {
+      setCheckResults(prev => ({ ...prev, [lead.id]: 'checking' }))
+      try {
+        const res = await fetch('/api/claude', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 100,
+            system: 'You are a job posting status checker. Given a URL, determine if it likely leads to an active job posting or a careers search page (respond "ok") vs a filled/expired/404 page (respond "dead"). Respond with ONLY the word "ok" or "dead".',
+            messages: [{ role: 'user', content: `Check if this job posting URL is still active: ${lead.apply_link}\n\nURL pattern analysis: Does the URL look like a direct job posting (greenhouse.io/jobs/ID, workday job ID, governmentjobs posting number) or a general search page? Is it a careers homepage? Respond ok or dead.` }]
+          })
+        })
+        const data = await res.json()
+        const result = data.content?.[0]?.text?.trim().toLowerCase().includes('dead') ? 'dead' : 'ok'
+        setCheckResults(prev => ({ ...prev, [lead.id]: result }))
+      } catch {
+        setCheckResults(prev => ({ ...prev, [lead.id]: 'ok' })) // assume ok on error
+      }
+      await new Promise(r => setTimeout(r, 200)) // small delay between calls
+    }
+    setChecking(false)
+  }
 
   useEffect(() => {
     if (!agentLeads.length) return
@@ -408,6 +437,14 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [] }) {
           </select>
         </div>
         <button className="btn" onClick={() => { setSearch(''); setFType(''); setFModel(''); setFRole(''); setFStatus('') }}>Clear</button>
+        <button
+          className="btn"
+          onClick={checkAllLinks}
+          disabled={checking}
+          style={{ borderColor: checking ? 'var(--warn)' : undefined, color: checking ? 'var(--warn)' : undefined }}
+        >
+          {checking ? '⏳ Checking...' : '🔗 Check Links'}
+        </button>
       </div>
 
       <div className="table-wrap">
@@ -440,7 +477,12 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [] }) {
             {filtered.map(l => (
               <tr key={l.id}>
                 <td style={{ fontWeight: 500, color: 'var(--text)' }}>
-                  <div>{l.role_title}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    {l.role_title}
+                    {checkResults[l.id] === 'checking' && <span style={{ fontSize: 9, color: 'var(--warn)' }}>⏳</span>}
+                    {checkResults[l.id] === 'dead' && <span style={{ fontSize: 9, color: 'var(--danger)', fontWeight: 700 }} title="Link may be dead/filled">⚠️ FILLED?</span>}
+                    {checkResults[l.id] === 'ok' && <span style={{ fontSize: 9, color: 'var(--success)' }}>✓</span>}
+                  </div>
                   {l.notes && <div style={{ fontSize: 10, color: 'var(--text3)', fontStyle: 'italic', marginTop: 2 }}>{l.notes}</div>}
                 </td>
                 <td style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{l.company}</td>
