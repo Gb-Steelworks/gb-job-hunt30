@@ -248,6 +248,56 @@ const SEED_LEADS = [
     status: 'New', notes: '611 Walker, Houston TX. IT Liaison/BA Lead bridging business + IT. PMO division. Strong alignment with Georges enterprise IT delivery background.',
     apply_link: 'https://www.governmentjobs.com/careers/houston'
   },
+  // -- KPMG -- 5 verified roles + contractor portal -------------------------
+  {
+    id: 33, role_title: 'Sr Associate, CFO/F&A Technology Business Analyst', company: 'KPMG',
+    via: 'Direct - kpmguscareers.com', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: 'TBD', days_posted: 14, match_score: 93,
+    contact_name: 'KPMG Recruiting', contact_email: '',
+    status: 'New', notes: 'Houston TX. Agile, PM skills, accounting/financial reporting BA. CFO advisory practice. Strong Capco/Deloitte alignment.',
+    apply_link: 'https://www.kpmguscareers.com/jobdetail/?jobId=125697'
+  },
+  {
+    id: 34, role_title: 'Sr Specialist, ServiceNow HRSD Business Analyst', company: 'KPMG',
+    via: 'Direct - kpmguscareers.com', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: 'TBD', days_posted: 21, match_score: 88,
+    contact_name: 'KPMG Recruiting', contact_email: '',
+    status: 'New', notes: 'Houston listed. ServiceNow HRSD config, Agile, business analysis tools. Advisory practice.',
+    apply_link: 'https://www.kpmguscareers.com/jobdetail/?jobId=128082'
+  },
+  {
+    id: 35, role_title: 'Sr Associate, Business Analyst', company: 'KPMG',
+    via: 'Direct - kpmguscareers.com', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: 'TBD', days_posted: 10, match_score: 91,
+    contact_name: 'KPMG Recruiting', contact_email: '',
+    status: 'New', notes: 'Houston TX. Core BA advisory role. KPMG Advisory is their fastest growing practice.',
+    apply_link: 'https://www.kpmguscareers.com/jobdetail/?jobId=132411'
+  },
+  {
+    id: 36, role_title: 'Technology Project Manager - GMS Tax', company: 'KPMG',
+    via: 'Direct - kpmguscareers.com', category: 'PM', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: 'TBD', days_posted: 18, match_score: 87,
+    contact_name: 'KPMG Recruiting', contact_email: '',
+    status: 'New', notes: 'Houston TX. Agile/Scrum PM for analytics practice. Rapid growth area.',
+    apply_link: 'https://www.kpmguscareers.com/job-search/'
+  },
+  {
+    id: 37, role_title: 'KPMG Assignment Select (KAS) - Contract PM/BA', company: 'KPMG',
+    via: 'KPMG contractor portal', category: 'consulting', type: 'Contract', work_model: 'Remote',
+    pay_rate: 'Project rate', days_posted: 7, match_score: 90,
+    contact_name: 'KPMG KAS Recruiting', contact_email: '',
+    status: 'New', notes: 'KPMG Assignment Select is their independent contractor portal - project-based work across Advisory, Risk, PM, BA. Register your profile and get matched to engagements.',
+    apply_link: 'https://www.kpmguscareers.com/contractor/'
+  },
+  // -- EY GigNow -- contractor portal + experienced roles --------------------
+  {
+    id: 38, role_title: 'EY GigNow - Contract BA/PM/Delivery (register profile)', company: 'EY Ernst & Young',
+    via: 'EY GigNow contractor portal', category: 'consulting', type: 'Contract', work_model: 'Remote',
+    pay_rate: 'Project rate', days_posted: 1, match_score: 92,
+    contact_name: 'EY GigNow Recruiting', contact_email: '',
+    status: 'New', notes: 'EY GigNow is their official contractor/gig platform. Register at app.gignow.com/ey - EY alumni explicitly welcomed. Contracts 30 days to 12 months. BA, PM, Delivery, Risk all in scope.',
+    apply_link: 'https://app.gignow.com/ey/job_postings'
+  },
 ]
 
 const STATUS_OPTIONS = ['New', 'Reviewing', 'Applied', 'Passed', 'Closed']
@@ -364,19 +414,16 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [] }) {
           <thead>
             <tr>
               {[
-                ['role_title', 'Role', 160],
-                ['company', 'Company', 130],
-                ['category', 'Cat', 54],
-                ['type', 'Type', 90],
-                ['work_model', 'Location', 76],
-                ['pay_rate', 'Pay', 96],
-                ['days_posted', 'Age', 52],
-                ['match_score', 'Match', 90],
-                ['contact_name', 'Contact', 130],
-                [null, 'Status', 96],
-                [null, 'Actions', 100],
+                ['role_title', 'Role', 180],
+                ['company', 'Company', 110],
+                ['type', 'Type', 110],
+                ['days_posted', 'Age', 46],
+                ['match_score', 'Match', 80],
+                ['contact_name', 'Contact', 120],
+                [null, 'Status', 90],
+                [null, 'Act.', 80],
               ].map(([col, label, width]) => (
-                <th key={label} style={{ width }} onClick={col ? () => handleSort(col) : undefined}>
+                <th key={label} style={{ width, ...(label === 'Act.' ? { position: 'sticky', right: 0, background: 'var(--bg2)', zIndex: 2 } : {}) }} onClick={col ? () => handleSort(col) : undefined}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     {label}
                     {col && <SortIcon col={col} sortCol={sortCol} sortDir={sortDir} />}
@@ -387,7 +434,7 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [] }) {
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={11} className="empty">No leads match your filters.</td></tr>
+              <tr><td colSpan={8} className="empty">No leads match your filters.</td></tr>
             )}
             {filtered.map(l => (
               <tr key={l.id}>
@@ -396,10 +443,12 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [] }) {
                   {l.notes && <div style={{ fontSize: 10, color: 'var(--text3)', fontStyle: 'italic', marginTop: 2 }}>{l.notes}</div>}
                 </td>
                 <td style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{l.company}</td>
-                <td><span className={`pill pill-${l.category.toLowerCase()}`}>{l.category}</span></td>
-                <td><span className={`pill pill-${l.type === 'Contract' ? 'contract' : 'ft'}`}>{l.type}</span></td>
-                <td><span className={`pill pill-${l.work_model.toLowerCase().replace('-','').replace(' ','-')}`}>{l.work_model}</span></td>
-                <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text2)' }}>{l.pay_rate}</td>
+                <td>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <span className={`pill pill-${l.type === 'Contract' ? 'contract' : 'ft'}`}>{l.type}</span>
+                    <span className={`pill pill-${l.work_model.toLowerCase().replace('-','').replace(' ','-')}`}>{l.work_model}</span>
+                  </div>
+                </td>
                 <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: l.days_posted <= 7 ? 'var(--success)' : l.days_posted > 30 ? 'var(--warn)' : 'var(--text2)' }}>{l.days_posted}d</td>
                 <td>
                   <div className="score-bar">
@@ -416,9 +465,9 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [] }) {
                     {STATUS_OPTIONS.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </td>
-                <td>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <button className="btn btn-sm btn-accent" onClick={() => setActiveRole(l)}>Prep ↗</button>
+                <td style={{ position: 'sticky', right: 0, background: 'var(--bg2)', zIndex: 1 }}>
+                  <div style={{ display: 'flex', gap: 3 }}>
+                    <button className="btn btn-sm btn-accent" onClick={() => setActiveRole(l)}>Prep</button>
                     <a href={l.apply_link} target="_blank" rel="noopener noreferrer">
                       <button className="btn btn-sm"><ExternalLink size={10} /></button>
                     </a>
