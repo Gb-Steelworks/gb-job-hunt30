@@ -1,6 +1,7 @@
 // v4
 // api/claude.js — CommonJS format for Vercel Node runtime
 // Trying to force change and new commit
+//
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
