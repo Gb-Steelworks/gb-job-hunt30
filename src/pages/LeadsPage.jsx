@@ -309,9 +309,9 @@ function SortIcon({ col, sortCol, sortDir }) {
 
 function scoreColor(s) { return s >= 90 ? 'var(--success)' : s >= 80 ? 'var(--warn)' : 'var(--text3)' }
 
-export default function LeadsPage({ onApplicationLogged, agentLeads = [] }) {
+export default function LeadsPage({ onApplicationLogged, agentLeads = [], initialCompanyFilter = '', onClearCompanyFilter }) {
   const [leads, setLeads] = useState(SEED_LEADS)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(initialCompanyFilter)
   const [fType, setFType] = useState('')
   const [fModel, setFModel] = useState('')
   const [fRole, setFRole] = useState('')
@@ -400,6 +400,15 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [] }) {
         <div className="page-sub">Agent 1 + Agent 2 · Last run: May 4, 2026 · {leads.length} leads · links verified</div>
       </div>
 
+      {initialCompanyFilter && (
+        <div className="card" style={{ marginBottom: 12, background: 'rgba(0,212,170,0.05)', border: '1px solid rgba(0,212,170,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px' }}>
+          <span style={{ fontSize: 12, color: 'var(--accent)' }}>
+            Filtered by company: <strong>{initialCompanyFilter}</strong>
+          </span>
+          <button className="btn btn-sm" onClick={() => { setSearch(''); onClearCompanyFilter?.() }}>Clear filter</button>
+        </div>
+      )}
+
       <div className="stats-row" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
         <div className="stat-card accent"><div className="s-label">Total</div><div className="s-val">{leads.length}</div></div>
         <div className="stat-card"><div className="s-label">New</div><div className="s-val">{newCount}</div></div>
@@ -436,7 +445,7 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [] }) {
             {STATUS_OPTIONS.map(s => <option key={s}>{s}</option>)}
           </select>
         </div>
-        <button className="btn" onClick={() => { setSearch(''); setFType(''); setFModel(''); setFRole(''); setFStatus('') }}>Clear</button>
+        <button className="btn" onClick={() => { setSearch(''); setFType(''); setFModel(''); setFRole(''); setFStatus(''); onClearCompanyFilter?.() }}>Clear</button>
         <button
           className="btn"
           onClick={checkAllLinks}
