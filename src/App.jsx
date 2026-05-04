@@ -1,10 +1,3 @@
-// App.jsx — UPDATED
-// Changes from original:
-//   1. Added ResumeVaultPage import + 'vault' nav item
-//   2. Added useState for pendingApplications to bridge LeadsPage → ApplicationsPage
-//   3. Passes onApplicationLogged to LeadsPage, pendingApplications to ApplicationsPage
-//   4. Everything else identical to your original
-
 import { useState } from 'react'
 import { Briefcase, Building2, Linkedin, BarChart2, Bot, ListChecks, FileText } from 'lucide-react'
 import LeadsPage from './pages/LeadsPage.jsx'
@@ -13,9 +6,9 @@ import LinkedInPage from './pages/LinkedInPage.jsx'
 import ApplicationsPage from './pages/ApplicationsPage.jsx'
 import AgentsPage from './pages/AgentsPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
-import ResumeVaultPage from './pages/ResumeVaultPage.jsx'   // ← NEW
+import ResumeVaultPage from './pages/ResumeVaultPage.jsx'
 
-const DAYS_LEFT = Math.max(0, Math.ceil((new Date('2026-05-31') - new Date()) / (1000 * 60 * 60 * 24)))
+const DAYS_LEFT = Math.max(0, Math.ceil((new Date('2026-06-03') - new Date()) / (1000 * 60 * 60 * 24)))
 
 const NAV = [
   { id: 'dashboard',    label: 'Dashboard',    icon: BarChart2,  section: 'Overview' },
@@ -24,30 +17,35 @@ const NAV = [
   { id: 'companies',    label: 'Companies',    icon: Building2,  count: 5 },
   { id: 'linkedin',     label: 'LinkedIn',     icon: Linkedin,   section: 'Network' },
   { id: 'agents',       label: 'Agents',       icon: Bot,        section: 'Automation' },
-  { id: 'vault',        label: 'Resume Vault', icon: FileText,   section: 'Prep' },  // ← NEW
+  { id: 'vault',        label: 'Resume Vault', icon: FileText,   section: 'Prep' },
 ]
 
 export default function App() {
   const [page, setPage] = useState('dashboard')
-  const [pendingApps, setPendingApps] = useState([])   // ← NEW: bridge from LeadsPage
+  const [pendingApps, setPendingApps] = useState([])
+  const [agentLeads, setAgentLeads] = useState([])
 
-  // Called by LeadsPage when user marks a role as Applied via RoleActionPanel
   const handleApplicationLogged = (appData) => {
-    setPendingApps(prev => {
-      const exists = prev.find(a => a.id === appData.id)
-      return exists ? prev : [...prev, appData]
+    setPendingApps(prev => prev.find(a => a.id === appData.id) ? prev : [...prev, appData])
+  }
+
+  const handleLeadsFound = (newLeads) => {
+    setAgentLeads(prev => {
+      const ids = new Set(prev.map(l => l.id))
+      return [...prev, ...newLeads.filter(l => !ids.has(l.id))]
     })
+    setPage('leads')
   }
 
   const renderPage = () => {
     switch (page) {
       case 'dashboard':    return <DashboardPage onNavigate={setPage} />
-      case 'leads':        return <LeadsPage onApplicationLogged={handleApplicationLogged} />
+      case 'leads':        return <LeadsPage onApplicationLogged={handleApplicationLogged} agentLeads={agentLeads} />
       case 'applications': return <ApplicationsPage pendingApplications={pendingApps} />
       case 'companies':    return <CompaniesPage />
       case 'linkedin':     return <LinkedInPage />
-      case 'agents':       return <AgentsPage />
-      case 'vault':        return <ResumeVaultPage />   // ← NEW
+      case 'agents':       return <AgentsPage onLeadsFound={handleLeadsFound} />
+      case 'vault':        return <ResumeVaultPage />
       default:             return <DashboardPage onNavigate={setPage} />
     }
   }
@@ -64,14 +62,13 @@ export default function App() {
         <div className="sidebar-deadline">
           <div className="label">Deadline</div>
           <div className="days">{DAYS_LEFT}</div>
-          <div className="until">days until May 31</div>
+          <div className="until">days until June 3</div>
         </div>
         <nav className="nav">
           {NAV.map(item => {
             const showSection = item.section && item.section !== lastSection
             if (showSection) lastSection = item.section
-            // Show live count badge for applications
-            const count = item.id === 'applications' ? pendingApps.length : item.count
+            const count = item.id === 'applications' ? pendingApps.length : item.id === 'leads' ? (8 + agentLeads.length) : item.count
             return (
               <div key={item.id}>
                 {showSection && <div className="nav-section">{item.section}</div>}
@@ -81,9 +78,7 @@ export default function App() {
                 >
                   <item.icon className="icon" size={14} />
                   {item.label}
-                  {count !== undefined && (
-                    <span className="nav-count">{count}</span>
-                  )}
+                  {count !== undefined && <span className="nav-count">{count}</span>}
                 </button>
               </div>
             )
@@ -91,7 +86,7 @@ export default function App() {
         </nav>
         <div style={{ padding: '14px 18px', borderTop: '1px solid var(--border)' }}>
           <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>
-            v1.1 · Built with Claude
+            v1.2 · Built with Claude
           </div>
         </div>
       </aside>
