@@ -1,3 +1,4 @@
+// Tweaking the window
 // LeadsPage.jsx - v2 with 20 real leads from Agent 1 + 2 runs (May 4 2026)
 // Prep ↗ opens RoleActionPanel for ATS optimize, cover letter, Q&A, and logging
 
