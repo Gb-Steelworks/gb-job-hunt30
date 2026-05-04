@@ -19,7 +19,7 @@ const STATUS_CONFIG = {
 
 const INDUSTRIES = ['Staffing / Recruiting', 'FSI / Banking', 'Consulting', 'Energy / Oil & Gas', 'Technology / SaaS', 'Government / Federal', 'Healthcare', 'Other']
 
-export default function CompaniesPage() {
+export default function CompaniesPage({ onNavigate }) {
   const [companies, setCompanies] = useState(SEED_COMPANIES)
   const [pendingRoles, setPendingRoles] = useState([])
   const [roleInput, setRoleInput] = useState('')
@@ -183,6 +183,15 @@ export default function CompaniesPage() {
               <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
                 <button className="btn btn-sm" onClick={() => { co.target_roles.forEach(r => verifyRole(co.id, r)) }}><RefreshCw size={11} /> Re-search</button>
                 <button className="btn btn-sm" onClick={() => addRoleToCompany(co.id)}><Plus size={11} /> Add role</button>
+                {onNavigate && (
+                  <button
+                    className="btn btn-sm btn-accent"
+                    onClick={() => onNavigate('leads', co.name)}
+                    title={`View leads for ${co.name}`}
+                  >
+                    View Leads →
+                  </button>
+                )}
                 {co.career_url && <a href={co.career_url} target="_blank" rel="noopener noreferrer"><button className="btn btn-sm"><ExternalLink size={11} /></button></a>}
               </div>
             </div>
