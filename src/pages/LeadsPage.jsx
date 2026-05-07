@@ -306,6 +306,23 @@ const SEED_LEADS = [
     status: 'New', notes: 'EY GigNow is their official contractor/gig platform. Register at app.gignow.com/ey - EY alumni explicitly welcomed. Contracts 30 days to 12 months. BA, PM, Delivery, Risk all in scope.',
     apply_link: 'https://app.gignow.com/ey/job_postings'
   },
+  {
+  id: 40,
+  role: "Project / Program Manager",
+  company: "Artemis Connection",
+  cat: "consulting",
+  type: "Contract",
+  loc: "Remote",
+  locBadge: "remote",
+  match: 90,
+  ageDays: 6,
+  hot: true,
+  contact: "Christy Johnson (Founder)",
+  contactType: "Direct — breezy.hr portal",
+  source: "Indeed / Artemis Connection",
+  applyUrl: "https://artemis-connection.breezy.hr/",
+  notes: "$70-80/hr, 12-month engagement, public sector VA client, occasional travel DC/Denver. CSM/PMP preferred. Strong consulting PM fit.",
+},
 ]
 
 const STATUS_OPTIONS = ['New', 'Reviewing', 'Applied', 'Passed', 'Closed']
