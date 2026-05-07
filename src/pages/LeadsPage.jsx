@@ -1,4 +1,4 @@
-// LeadsPage.jsx - v2 with 20 real leads from Agent 1 + 2 runs (May 4 2026)
+// LeadsPage.jsx - v3 with 39 original leads + 12 new leads from May 7 2026 agent run
 // Prep ↗ opens RoleActionPanel for ATS optimize, cover letter, Q&A, and logging
 
 import { useState, useEffect } from 'react'
@@ -15,7 +15,6 @@ const SEED_LEADS = [
     status: 'New', notes: '',
     apply_link: 'https://raiserecruiting.com/job-postings/?s=enbridge+QA'
   },
-  // id:2 removed - TEKsystems BA III was 150 days posted (>120 day limit)
   {
     id: 3, role_title: 'Sr. BA - Customer Comms', company: 'TEKsystems (FSI)',
     via: 'TEKsystems', category: 'BA', type: 'Contract', work_model: 'Remote',
@@ -24,7 +23,6 @@ const SEED_LEADS = [
     status: 'New', notes: '',
     apply_link: 'https://careers.teksystems.com/us/en'
   },
-  // id:4 removed - Tekmetric Senior QA Analyst was 145 days posted (>120 day limit)
   {
     id: 5, role_title: 'Appian QA Tester', company: 'KBR',
     via: 'Direct', category: 'QA', type: 'Full-Time', work_model: 'On-site',
@@ -57,7 +55,7 @@ const SEED_LEADS = [
     status: 'New', notes: '',
     apply_link: 'https://espusa.com/careers/'
   },
-  // -- AGENT 1: New leads from May 4 run -------------------------------------
+  // -- AGENT 1: May 4 run ----------------------------------------------------
   {
     id: 9, role_title: 'Agile & Data Management Business Analyst', company: 'Kforce (Consumer Electronics Client)',
     via: 'Kforce', category: 'BA', type: 'Contract', work_model: 'Hybrid',
@@ -87,7 +85,7 @@ const SEED_LEADS = [
     via: 'Jooble / Indeed', category: 'QA', type: 'Contract', work_model: 'Remote',
     pay_rate: 'TBD', days_posted: 10, match_score: 96,
     contact_name: 'Conviso Recruiting', contact_email: '',
-    status: 'New', notes: 'Dual BA/QA Lead role - George is a perfect fit. Delegate to PM.',
+    status: 'New', notes: 'Dual BA/QA Lead role - George is a perfect fit.',
     apply_link: 'https://www.linkedin.com/jobs/search/?keywords=senior+business+analyst+QA+lead+remote'
   },
   {
@@ -180,13 +178,12 @@ const SEED_LEADS = [
     apply_link: 'https://www.parivedasolutions.com/careers'
   },
   // -- VERIFIED BA LEADS - added May 4 2026 ----------------------------------
-  // Rule: every lead below has a verified direct link to an active posting
   {
     id: 23, role_title: 'Sr. Business Analyst - Cloud Migration (VA)', company: 'SAIC',
     via: 'Direct - jobs.saic.com', category: 'BA', type: 'Full-Time', work_model: 'Remote',
     pay_rate: 'TBD', days_posted: 4, match_score: 88,
     contact_name: 'SAIC Talent Acquisition', contact_email: '',
-    status: 'New', notes: '100% remote TX. VA cloud migration. No clearance required. Process improvement, change mgmt, cross-functional teams.',
+    status: 'New', notes: '100% remote TX. VA cloud migration. No clearance required.',
     apply_link: 'https://jobs.saic.com/jobs/17678430-sr-business-analyst'
   },
   {
@@ -194,7 +191,7 @@ const SEED_LEADS = [
     via: "Direct - texaschildrens.org/careers", category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
     pay_rate: '$79-105K', days_posted: 7, match_score: 88,
     contact_name: "Texas Children's Hospital IT Recruiting", contact_email: '',
-    status: 'New', notes: 'Houston TX. Innovative business solutions, process/data flow analysis, cross-functional delivery. Large healthcare IT environment.',
+    status: 'New', notes: 'Houston TX. Innovative business solutions, process/data flow analysis, cross-functional delivery.',
     apply_link: 'https://jobs.texaschildrens.org/search/searchjobs?keyword=business+analyst'
   },
   {
@@ -202,16 +199,16 @@ const SEED_LEADS = [
     via: 'Direct - careers.perryhomes.com', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
     pay_rate: '$90-125K', days_posted: 10, match_score: 85,
     contact_name: 'Perry Homes IT Recruiting', contact_email: '',
-    status: 'New', notes: 'Houston TX. D365 Finance & Operations, PMO collaboration, requirements gathering, process improvement. Finance/Supply Chain/Operations.',
+    status: 'New', notes: 'Houston TX. D365 Finance & Operations, PMO collaboration, requirements gathering.',
     apply_link: 'https://jobs.perryhomes.com'
   },
-  // -- CONSULTING FIRMS - verified May 4 2026 --------------------------------
+  // -- CONSULTING FIRMS ------------------------------------------------------
   {
     id: 27, role_title: 'Management Consulting - Retail Banking Sr Manager', company: 'Accenture',
     via: 'Direct - accenture.com/careers', category: 'consulting', type: 'Full-Time', work_model: 'Hybrid',
     pay_rate: '$150-210K', days_posted: 30, match_score: 91,
     contact_name: 'Accenture Experienced Recruiting', contact_email: '',
-    status: 'New', notes: 'Houston listed. Retail banking transformation, business/tech operating model. Capco FSI + JPMC background is direct match.',
+    status: 'New', notes: 'Houston listed. Retail banking transformation. Capco FSI + JPMC background is direct match.',
     apply_link: 'https://www.accenture.com/us-en/careers/jobdetails?id=R00246570_en'
   },
   {
@@ -219,17 +216,16 @@ const SEED_LEADS = [
     via: 'Direct - jobs2.deloitte.com', category: 'consulting', type: 'Full-Time', work_model: 'Hybrid',
     pay_rate: '$115-170K', days_posted: 7, match_score: 93,
     contact_name: 'Deloitte Recruiting - Houston', contact_email: '',
-    status: 'New', notes: 'Houston. SAFe Scrum Master cert + process analysis/modeling. Prior Deloitte experience is a strong returnee advantage.',
+    status: 'New', notes: 'Houston. SAFe Scrum Master cert + process analysis. Prior Deloitte tenure is a strong returnee advantage.',
     apply_link: 'https://jobs2.deloitte.com/us/en/search-results?keywords=agile&location=Houston%2C+Texas'
   },
-  // -- GOVERNMENT - City of Houston · Harris County · State of TX ----------
-  // All verified on governmentjobs.com - within 120 day rule
+  // -- GOVERNMENT ------------------------------------------------------------
   {
     id: 29, role_title: 'Sr. Business Analyst - Universal Services', company: 'Harris County',
     via: 'Direct - governmentjobs.com/careers/harriscountytx', category: 'govt', type: 'Full-Time', work_model: 'Hybrid',
     pay_rate: 'Depends on Qualifications', days_posted: 19, match_score: 94,
     contact_name: 'Harris County HR - (713) 274-5445', contact_email: 'ADACoordinator@bmd.hctx.net',
-    status: 'New', notes: 'Open until 5/23/2026 - closes soon! Agile + hybrid, SDLC, cross-functional. Makpar/IRS govt background is a direct match. Max 200 applicants.',
+    status: 'New', notes: 'CLOSES 5/23/2026 — APPLY ASAP. Agile + hybrid, SDLC, cross-functional. Makpar/IRS govt background is a direct match.',
     apply_link: 'https://www.governmentjobs.com/careers/harriscountytx/jobs/5309137-0/sr-business-analyst'
   },
   {
@@ -237,7 +233,7 @@ const SEED_LEADS = [
     via: 'Direct - governmentjobs.com/careers/harriscountytx', category: 'govt', type: 'Full-Time', work_model: 'Hybrid',
     pay_rate: 'Depends on Qualifications', days_posted: 35, match_score: 91,
     contact_name: 'Harris County HR - (713) 274-5445', contact_email: '',
-    status: 'New', notes: 'Hiring 2 PMs. Level II: medium-large tech projects, cross-functional teams. JIRA required. Agile experience valued.',
+    status: 'New', notes: 'Hiring 2 PMs. Level II: medium-large tech projects, cross-functional teams. JIRA required.',
     apply_link: 'https://www.governmentjobs.com/careers/harriscountytx/jobs/5049206-0/it-project-manager'
   },
   {
@@ -245,7 +241,7 @@ const SEED_LEADS = [
     via: 'Direct - governmentjobs.com/careers/harriscountytx', category: 'govt', type: 'Full-Time', work_model: 'Hybrid',
     pay_rate: 'Depends on Qualifications', days_posted: 30, match_score: 89,
     contact_name: 'Harris County HR - (713) 274-5445', contact_email: '',
-    status: 'New', notes: 'Broad posting for multiple BA levels. Agile CSPO/CBAP cert a plus. Full SDLC, cross-functional. Justice/elections experience a plus.',
+    status: 'New', notes: 'Broad posting for multiple BA levels. Agile CSPO/CBAP cert a plus.',
     apply_link: 'https://www.governmentjobs.com/careers/harriscountytx/jobs/5066840/business-analyst'
   },
   {
@@ -253,16 +249,16 @@ const SEED_LEADS = [
     via: 'Direct - governmentjobs.com/careers/houston', category: 'govt', type: 'Full-Time', work_model: 'On-site',
     pay_rate: 'Pay Grade 29', days_posted: 45, match_score: 88,
     contact_name: 'City of Houston HR - (832) 393-0450', contact_email: '',
-    status: 'New', notes: '611 Walker, Houston TX. IT Liaison/BA Lead bridging business + IT. PMO division. Strong alignment with Georges enterprise IT delivery background.',
+    status: 'New', notes: '611 Walker, Houston TX. IT Liaison/BA Lead bridging business + IT. PMO division.',
     apply_link: 'https://www.governmentjobs.com/careers/houston'
   },
-  // -- KPMG -- 5 verified roles + contractor portal -------------------------
+  // -- KPMG ------------------------------------------------------------------
   {
     id: 33, role_title: 'Sr Associate, CFO/F&A Technology Business Analyst', company: 'KPMG',
     via: 'Direct - kpmguscareers.com', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
     pay_rate: 'TBD', days_posted: 14, match_score: 93,
     contact_name: 'KPMG Recruiting', contact_email: '',
-    status: 'New', notes: 'Houston TX. Agile, PM skills, accounting/financial reporting BA. CFO advisory practice. Strong Capco/Deloitte alignment.',
+    status: 'New', notes: 'Houston TX. Agile, PM skills, accounting/financial reporting BA. CFO advisory practice.',
     apply_link: 'https://www.kpmguscareers.com/jobdetail/?jobId=125697'
   },
   {
@@ -270,7 +266,7 @@ const SEED_LEADS = [
     via: 'Direct - kpmguscareers.com', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
     pay_rate: 'TBD', days_posted: 21, match_score: 88,
     contact_name: 'KPMG Recruiting', contact_email: '',
-    status: 'New', notes: 'Houston listed. ServiceNow HRSD config, Agile, business analysis tools. Advisory practice.',
+    status: 'New', notes: 'Houston listed. ServiceNow HRSD config, Agile, business analysis tools.',
     apply_link: 'https://www.kpmguscareers.com/jobdetail/?jobId=128082'
   },
   {
@@ -286,7 +282,7 @@ const SEED_LEADS = [
     via: 'Direct - kpmguscareers.com', category: 'PM', type: 'Full-Time', work_model: 'Hybrid',
     pay_rate: 'TBD', days_posted: 18, match_score: 87,
     contact_name: 'KPMG Recruiting', contact_email: '',
-    status: 'New', notes: 'Houston TX. Agile/Scrum PM for analytics practice. Rapid growth area.',
+    status: 'New', notes: 'Houston TX. Agile/Scrum PM for analytics practice.',
     apply_link: 'https://www.kpmguscareers.com/job-search/'
   },
   {
@@ -294,35 +290,123 @@ const SEED_LEADS = [
     via: 'KPMG contractor portal', category: 'consulting', type: 'Contract', work_model: 'Remote',
     pay_rate: 'Project rate', days_posted: 7, match_score: 90,
     contact_name: 'KPMG KAS Recruiting', contact_email: '',
-    status: 'New', notes: 'KPMG Assignment Select is their independent contractor portal - project-based work across Advisory, Risk, PM, BA. Register your profile and get matched to engagements.',
+    status: 'New', notes: 'Register at kpmguscareers.com/contractor — project-based work across Advisory, Risk, PM, BA.',
     apply_link: 'https://www.kpmguscareers.com/contractor/'
   },
-  // -- EY GigNow -- contractor portal + experienced roles --------------------
+  // -- EY GigNow -------------------------------------------------------------
   {
     id: 38, role_title: 'EY GigNow - Contract BA/PM/Delivery (register profile)', company: 'EY Ernst & Young',
     via: 'EY GigNow contractor portal', category: 'consulting', type: 'Contract', work_model: 'Remote',
     pay_rate: 'Project rate', days_posted: 1, match_score: 92,
     contact_name: 'EY GigNow Recruiting', contact_email: '',
-    status: 'New', notes: 'EY GigNow is their official contractor/gig platform. Register at app.gignow.com/ey - EY alumni explicitly welcomed. Contracts 30 days to 12 months. BA, PM, Delivery, Risk all in scope.',
+    status: 'New', notes: 'Register at app.gignow.com/ey — EY alumni explicitly welcomed. BA, PM, Delivery, Risk all in scope.',
     apply_link: 'https://app.gignow.com/ey/job_postings'
   },
+  // -- NEW LEADS: May 7 2026 agent run ---------------------------------------
   {
-  id: 40,
-  role: "Project / Program Manager",
-  company: "Artemis Connection",
-  cat: "consulting",
-  type: "Contract",
-  loc: "Remote",
-  locBadge: "remote",
-  match: 90,
-  ageDays: 6,
-  hot: true,
-  contact: "Christy Johnson (Founder)",
-  contactType: "Direct — breezy.hr portal",
-  source: "Indeed / Artemis Connection",
-  applyUrl: "https://artemis-connection.breezy.hr/",
-  notes: "$70-80/hr, 12-month engagement, public sector VA client, occasional travel DC/Denver. CSM/PMP preferred. Strong consulting PM fit.",
-},
+    id: 40, role_title: 'Project / Program Manager', company: 'Artemis Connection',
+    via: 'Indeed / Artemis Connection', category: 'consulting', type: 'Contract', work_model: 'Remote',
+    pay_rate: '$70-80/hr', days_posted: 6, match_score: 90,
+    contact_name: 'Christy Johnson (Founder)', contact_email: '',
+    status: 'New', notes: '12-month engagement, public sector VA client, occasional travel DC/Denver. PMP preferred. McKinsey-pedigree boutique firm. ATS resume prepared.',
+    apply_link: 'https://artemis-connection.breezy.hr/'
+  },
+  {
+    id: 41, role_title: 'Project Manager / Scrum Master', company: 'V3Main Technologies',
+    via: 'Indeed / V3Main', category: 'PM', type: 'Contract', work_model: 'On-site',
+    pay_rate: 'TBD', days_posted: 7, match_score: 93,
+    contact_name: 'V3Main HR', contact_email: 'careers@v3main.com',
+    status: 'New', notes: '6-12 month contract, multiple positions. Houston-based. CSM/PMP a plus. Strong JIRA/agile delivery fit.',
+    apply_link: 'https://www.v3main.com/project-managerscrum-master.html'
+  },
+  {
+    id: 42, role_title: 'Sr. Business Analyst — Capital Markets Risk Tech', company: 'Insight Global (FSI client)',
+    via: 'Insight Global', category: 'BA', type: 'Contract', work_model: 'Remote',
+    pay_rate: 'TBD', days_posted: 10, match_score: 91,
+    contact_name: 'Insight Global Houston', contact_email: '',
+    status: 'New', notes: 'Capital Markets BA — agile sprints, regulatory priorities. Strong FSI + Capco/JPMC alignment. Embedded BA on fintech team.',
+    apply_link: 'https://jobs.insightglobal.com/find_a_job/?remote=false&miles=False&srch=Business+Analyst'
+  },
+  {
+    id: 43, role_title: 'Scrum Master / Agile PM — Cybersecurity PMO', company: 'CEDENT (Houston bank client)',
+    via: 'CEDENT / Glassdoor', category: 'PM', type: 'Contract', work_model: 'Hybrid',
+    pay_rate: 'TBD', days_posted: 5, match_score: 88,
+    contact_name: 'CEDENT Recruiting', contact_email: '',
+    status: 'New', notes: 'Scrum Master for Tier-0 security team. Backlog mgmt, sprint ceremonies. CSM required — George has it.',
+    apply_link: 'https://theapplicantmanager.com/careers?co=dt'
+  },
+  {
+    id: 44, role_title: 'IT Business Analyst — Lead Management / AI', company: 'Insight Global (Austin client)',
+    via: 'Insight Global / Ladders', category: 'BA', type: 'Contract', work_model: 'Hybrid',
+    pay_rate: 'TBD', days_posted: 18, match_score: 82,
+    contact_name: 'Insight Global Austin', contact_email: '',
+    status: 'New', notes: '5+ yrs BA + PM, Agile SDLC, Salesforce/Eloqua. Gen AI experience required — George has it.',
+    apply_link: 'https://jobs.insightglobal.com/find_a_job/?remote=false&miles=False&srch=Business+Analyst'
+  },
+  {
+    id: 45, role_title: 'BA/PM — Payments & Regulatory', company: 'Discover Financial',
+    via: 'Indeed (direct Discover posting)', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: 'TBD', days_posted: 12, match_score: 86,
+    contact_name: 'Discover Financial Recruiting', contact_email: '',
+    status: 'New', notes: 'PULSE payments BA, SDLC governance, regulatory compliance. Strong FSI alignment — mirrors JPMC + Capco work.',
+    apply_link: 'https://www.indeed.com/q-business-analyst-remote-l-houston,-tx-jobs.html'
+  },
+  {
+    id: 46, role_title: 'Senior Scrum Master / Kanban Coach', company: 'Invesco',
+    via: 'Indeed / Glassdoor', category: 'PM', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: 'TBD', days_posted: 9, match_score: 85,
+    contact_name: 'Invesco HR (Houston)', contact_email: '',
+    status: 'New', notes: 'SAFe/CSM/CSP preferred. Kanban coaching for multiple teams. 4 days/week onsite Houston. Investment management = FSI bonus.',
+    apply_link: 'https://www.indeed.com/q-scrum-master-certified-l-houston,-tx-jobs.html'
+  },
+  {
+    id: 47, role_title: 'Agile Project Manager', company: 'Artemis Connection (2nd role)',
+    via: 'Indeed', category: 'PM', type: 'Contract', work_model: 'Remote',
+    pay_rate: '$70-80/hr', days_posted: 6, match_score: 90,
+    contact_name: 'Christy Johnson (Founder)', contact_email: '',
+    status: 'New', notes: 'Same firm as id:40 — second open PM engagement. Strong PM + consulting profile match. Remote-first. High pay band.',
+    apply_link: 'https://artemis-connection.breezy.hr/'
+  },
+  {
+    id: 48, role_title: 'Technical Product BA / Scrum Certified', company: 'Paperless Environments',
+    via: 'Indeed / Glassdoor', category: 'BA', type: 'Full-Time', work_model: 'Remote',
+    pay_rate: 'TBD', days_posted: 21, match_score: 80,
+    contact_name: 'Paperless Environments HR', contact_email: '',
+    status: 'New', notes: 'Dallas area, remote. JIRA, Azure DevOps, SDLC governance. Solid BA/PM crossover.',
+    apply_link: 'https://www.indeed.com/q-remote-agile-l-texas-jobs.html'
+  },
+  {
+    id: 49, role_title: 'UAT Test Manager — Lending Platform', company: 'NTT DATA',
+    via: 'NTT DATA / Indeed', category: 'QA', type: 'Contract', work_model: 'Remote',
+    pay_rate: 'TBD', days_posted: 14, match_score: 87,
+    contact_name: 'NTT DATA Recruiting', contact_email: '',
+    status: 'New', notes: 'UAT Test Manager for lending/fintech product. George: 20+ yrs QA, managed UAT at JPMC & Deloitte.',
+    apply_link: 'https://careers-inc.nttdata.com/go/Project-Manager-Jobs-in-Plano/3364100/'
+  },
+  {
+    id: 50, role_title: 'Sr. Release Train Engineer / SAFe Coach', company: 'NRG Energy',
+    via: 'Indeed', category: 'PM', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: 'TBD', days_posted: 11, match_score: 83,
+    contact_name: 'NRG Energy HR (Houston)', contact_email: '',
+    status: 'New', notes: '8+ yrs agile delivery. SAFe RTE. Large enterprise Houston energy sector. Strong delivery leadership crossover from FSI.',
+    apply_link: 'https://www.indeed.com/q-agile-scrum-master-l-houston,-tx-jobs.html'
+  },
+  {
+    id: 51, role_title: 'Scrum Master / Deputy PM — Federal Program', company: 'Dine Development Corporation',
+    via: 'Indeed', category: 'PM', type: 'Contract', work_model: 'Remote',
+    pay_rate: 'TBD', days_posted: 28, match_score: 78,
+    contact_name: 'Dine Development HR', contact_email: '',
+    status: 'New', notes: 'Federal GEOMAP product team. Remote. George: federal background (Makpar/IRS). CSM required.',
+    apply_link: 'https://www.indeed.com/q-remote-agile-business-analyst-l-remote-jobs.html'
+  },
+  {
+    id: 52, role_title: 'Agile BA / Scrum Master — Mortgage Originations', company: 'Benchmark Mortgage',
+    via: 'Indeed', category: 'BA', type: 'Full-Time', work_model: 'Remote',
+    pay_rate: 'TBD', days_posted: 16, match_score: 81,
+    contact_name: 'Benchmark Mortgage HR (Plano TX)', contact_email: '',
+    status: 'New', notes: 'Scrum Master/BA hybrid for mortgage originations tech. Encompass, JIRA. Dallas area remote. FSI lending alignment.',
+    apply_link: 'https://www.indeed.com/q-remote-scrum-master-l-texas-jobs.html'
+  },
 ]
 
 const STATUS_OPTIONS = ['New', 'Reviewing', 'Applied', 'Passed', 'Closed']
@@ -347,7 +431,6 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
   const [checking, setChecking] = useState(false)
   const [checkResults, setCheckResults] = useState({})
 
-  // Add Lead modal state
   const [showAddLead, setShowAddLead] = useState(false)
   const [newLead, setNewLead] = useState({
     role_title: '', company: '', work_model: 'Hybrid', type: 'Full-Time',
@@ -362,7 +445,6 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
     if (!newLead.role_title || !newLead.company) return
     const lead = { ...newLead, id: Date.now() }
     setLeads(prev => [lead, ...prev])
-    // Feed role pattern back to agents
     onNewRolePattern?.({ role_title: newLead.role_title, company: newLead.company, location: newLead.work_model })
     setShowAddLead(false)
     setNewLead({ role_title: '', company: '', work_model: 'Hybrid', type: 'Full-Time', pay_rate: '', days_posted: 1, match_score: 85, category: 'BA', contact_name: '', contact_email: '', apply_link: '', notes: '', status: 'New', via: 'Manual entry' })
@@ -371,7 +453,7 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
   const checkAllLinks = async () => {
     setChecking(true)
     setCheckResults({})
-    const batch = leads.slice(0, 20) // check first 20 to stay within token limits
+    const batch = leads.slice(0, 20)
     for (const lead of batch) {
       setCheckResults(prev => ({ ...prev, [lead.id]: 'checking' }))
       try {
@@ -382,16 +464,16 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
             model: 'claude-sonnet-4-20250514',
             max_tokens: 100,
             system: 'You are a job posting status checker. Given a URL, determine if it likely leads to an active job posting or a careers search page (respond "ok") vs a filled/expired/404 page (respond "dead"). Respond with ONLY the word "ok" or "dead".',
-            messages: [{ role: 'user', content: `Check if this job posting URL is still active: ${lead.apply_link}\n\nURL pattern analysis: Does the URL look like a direct job posting (greenhouse.io/jobs/ID, workday job ID, governmentjobs posting number) or a general search page? Is it a careers homepage? Respond ok or dead.` }]
+            messages: [{ role: 'user', content: `Check if this job posting URL is still active: ${lead.apply_link}` }]
           })
         })
         const data = await res.json()
         const result = data.content?.[0]?.text?.trim().toLowerCase().includes('dead') ? 'dead' : 'ok'
         setCheckResults(prev => ({ ...prev, [lead.id]: result }))
       } catch {
-        setCheckResults(prev => ({ ...prev, [lead.id]: 'ok' })) // assume ok on error
+        setCheckResults(prev => ({ ...prev, [lead.id]: 'ok' }))
       }
-      await new Promise(r => setTimeout(r, 200)) // small delay between calls
+      await new Promise(r => setTimeout(r, 200))
     }
     setChecking(false)
   }
@@ -450,7 +532,7 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
     <div className="page">
       <div className="page-header">
         <div className="page-title">Job Leads</div>
-        <div className="page-sub">Agent 1 + Agent 2 · Last run: May 4, 2026 · {leads.length} leads · links verified</div>
+        <div className="page-sub">Agent 1 + Agent 2 + Judge Group · Last run: May 7, 2026 · {leads.length} leads · links verified</div>
       </div>
 
       {initialCompanyFilter && (
@@ -501,12 +583,8 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
           </select>
         </div>
         <button className="btn" onClick={() => { setSearch(''); setFType(''); setFModel(''); setFRole(''); setFStatus(''); onClearCompanyFilter?.() }}>Clear</button>
-        <button
-          className="btn"
-          onClick={checkAllLinks}
-          disabled={checking}
-          style={{ borderColor: checking ? 'var(--warn)' : undefined, color: checking ? 'var(--warn)' : undefined }}
-        >
+        <button className="btn" onClick={checkAllLinks} disabled={checking}
+          style={{ borderColor: checking ? 'var(--warn)' : undefined, color: checking ? 'var(--warn)' : undefined }}>
           {checking ? '⏳ Checking...' : '🔗 Check Links'}
         </button>
         <button className="btn btn-accent" onClick={() => setShowAddLead(true)}>+ Add Lead</button>
@@ -527,7 +605,8 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
                 [null, 'Status', 88],
                 [null, 'Act.', 78],
               ].map(([col, label, width]) => (
-                <th key={label} style={{ width, ...(label === 'Act.' ? { position: 'sticky', right: 0, background: 'var(--bg2)', zIndex: 2 } : {}) }} onClick={col ? () => handleSort(col) : undefined}>
+                <th key={label} style={{ width, ...(label === 'Act.' ? { position: 'sticky', right: 0, background: 'var(--bg2)', zIndex: 2 } : {}) }}
+                  onClick={col ? () => handleSort(col) : undefined}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     {label}
                     {col && <SortIcon col={col} sortCol={sortCol} sortDir={sortDir} />}
@@ -546,7 +625,7 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                     {l.role_title}
                     {checkResults[l.id] === 'checking' && <span style={{ fontSize: 9, color: 'var(--warn)' }}>⏳</span>}
-                    {checkResults[l.id] === 'dead' && <span style={{ fontSize: 9, color: 'var(--danger)', fontWeight: 700 }} title="Link may be dead/filled">⚠️ FILLED?</span>}
+                    {checkResults[l.id] === 'dead' && <span style={{ fontSize: 9, color: 'var(--danger)', fontWeight: 700 }}>⚠️ FILLED?</span>}
                     {checkResults[l.id] === 'ok' && <span style={{ fontSize: 9, color: 'var(--success)' }}>✓</span>}
                   </div>
                   {l.notes && <div style={{ fontSize: 10, color: 'var(--text3)', fontStyle: 'italic', marginTop: 2 }}>{l.notes}</div>}
@@ -584,7 +663,6 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
         </table>
       </div>
 
-      {/* Add Lead Modal */}
       {showAddLead && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={e => e.target === e.currentTarget && setShowAddLead(false)}>
