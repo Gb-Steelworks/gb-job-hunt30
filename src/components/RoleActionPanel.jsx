@@ -1,19 +1,17 @@
 // RoleActionPanel.jsx
 // Drop into src/components/
 // Triggered by "Prep ↗" button in LeadsPage. Pass the lead object as `role` prop.
-// Calls Anthropic API for ATS optimization, cover letter, Q&A.
-//
 
 import { useState, useEffect, useRef } from 'react'
 import { X, Copy, Check, ChevronRight, Loader } from 'lucide-react'
 import { suggestVariant } from '../pages/ResumeVaultPage.jsx'
 
 const VARIANTS = [
-  { id: 'fsi',      label: 'FSI / Banking',        accent: 'var(--accent2)' },
-  { id: 'consulting',label: 'Consulting',           accent: 'var(--success)' },
-  { id: 'pm',       label: 'Project / Product Mgmt',accent: 'var(--accent)' },
-  { id: 'qa',       label: 'Testing / QA',          accent: 'var(--warn)' },
-  { id: 'delivery', label: 'Delivery Management',   accent: '#fb923c' },
+  { id: 'fsi',       label: 'FSI / Banking',          accent: 'var(--accent2)' },
+  { id: 'consulting',label: 'Consulting',              accent: 'var(--success)' },
+  { id: 'pm',        label: 'Project / Product Mgmt',  accent: 'var(--accent)' },
+  { id: 'qa',        label: 'Testing / QA',            accent: 'var(--warn)' },
+  { id: 'delivery',  label: 'Delivery Management',     accent: '#fb923c' },
 ]
 
 const STEPS = [
@@ -34,20 +32,48 @@ Tools: JIRA, Confluence, Power BI, Selenium, Smartsheet, Azure, Visio, IBM CLM.
 Results: $10M+ regulatory risk mitigation, 90% faster system resolution, $200K release savings,
 30% faster testing cycles, 50% faster incident resolution, 35-40% fraud reduction (IRS 651M users).`
 
+// ─── Claude API helper — robust error handling ─────────────────────────────
 async function claude(system, user) {
-  const res = await fetch('/api/claude', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      system,
-      messages: [{ role: 'user', content: user }],
-    }),
-  })
-  const data = await res.json()
-  if (data.error) throw new Error(data.error.message)
-  return data.content?.map(b => b.text || '').join('') || ''
+  let res
+  try {
+    res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system,
+        messages: [{ role: 'user', content: user }],
+      }),
+    })
+  } catch (networkErr) {
+    throw new Error(`Network error — check your connection (${networkErr.message})`)
+  }
+
+  // Try to parse JSON — if it fails, surface the raw response text
+  let data
+  try {
+    data = await res.json()
+  } catch {
+    const raw = await res.text().catch(() => `HTTP ${res.status}`)
+    throw new Error(`API returned non-JSON response: ${raw.slice(0, 200)}`)
+  }
+
+  // Handle error shapes from both Anthropic API and the Vercel proxy
+  if (!res.ok || data.error) {
+    const msg =
+      (typeof data.error === 'string' && data.error) ||
+      data.error?.message ||
+      data.message ||
+      data.detail ||
+      `HTTP ${res.status} — check VITE_ANTHROPIC_API_KEY in Vercel`
+    throw new Error(msg)
+  }
+
+  // Extract text from content blocks
+  const text = data.content?.map(b => b.text || '').join('').trim()
+  if (!text) throw new Error('Empty response from API — try again')
+  return text
 }
 
 export default function RoleActionPanel({ role, onClose, onApplied }) {
@@ -81,7 +107,9 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
           setJdFetched(true)
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        // Silent fail on auto-fetch — user can paste manually
+      })
       .finally(() => setJdFetching(false))
   }, [role?.id])
 
@@ -91,28 +119,31 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
 
   const run = async (type) => {
     setLoading(l => ({ ...l, [type]: true }))
+    setOut(o => ({ ...o, [type]: '' })) // clear previous output
     try {
-      const jdStr = jd ? `\n\nJob Description:\n${jd}` : ''
+      const jdStr = jd.trim() ? `\n\nJob Description:\n${jd.trim()}` : ''
       let result = ''
+
       if (type === 'ats') {
         result = await claude(
-          'ATS resume expert. Rewrite bullet points to match job keywords. Be specific. Return only the bullet list. No fictional experience.',
-          `Candidate:\n${GEORGE}\n\nRole:\n${roleStr}${jdStr}\n\nVariant focus: ${variant}\n\nRewrite the 10 most impactful bullets optimized for this role. Format as clean bullet list.`
+          'You are an ATS resume expert. Rewrite bullet points to match job keywords precisely. Be specific and quantitative. Return only the bullet list. No fictional experience — use only what is in the candidate background.',
+          `Candidate background:\n${GEORGE}\n\nRole applying to:\n${roleStr}${jdStr}\n\nResume variant focus: ${variant}\n\nRewrite the 10 most impactful resume bullets optimized for this specific role and its ATS keywords. Format as a clean bullet list using • character. Each bullet should start with a strong action verb and include a metric where possible.`
         )
       } else if (type === 'cover') {
         result = await claude(
-          'Expert cover letter writer for tech professionals. Write compelling, specific letters — not AI-sounding. Use concrete numbers.',
-          `Write a cover letter for George Brooks applying to:\n${roleStr}${jdStr}\n\nBackground:\n${GEORGE}\n\n3 short paragraphs. Professional but human. End with a clear call to action.`
+          'You are an expert cover letter writer for senior tech professionals. Write compelling, specific letters — not AI-sounding. Use concrete numbers and real experience. No filler phrases.',
+          `Write a cover letter for George Brooks applying to:\n${roleStr}${jdStr}\n\nCandidate background:\n${GEORGE}\n\nFormat: 3 short focused paragraphs. Opening: why this role/company specifically. Middle: 2-3 concrete achievements directly relevant to this role. Close: clear call to action. Professional but human tone.`
         )
       } else if (type === 'qa') {
         result = await claude(
-          'Interview coach for tech PM/QA/Agile roles. Generate likely recruiter + HM questions with STAR answers tailored to the candidate.',
-          `8 interview Q&As for George Brooks applying to:\n${roleStr}${jdStr}\n\nBackground:\n${GEORGE}\n\nFormat:\nQ: [question]\nA: [STAR answer, 3-4 sentences]`
+          'You are an interview coach for senior tech PM/QA/Agile professionals. Generate the most likely recruiter and hiring manager questions with strong STAR-format answers tailored to this specific candidate and role.',
+          `Generate 8 interview Q&As for George Brooks applying to:\n${roleStr}${jdStr}\n\nCandidate background:\n${GEORGE}\n\nFormat each as:\nQ: [question]\nA: [STAR answer — Situation, Task, Action, Result — 3-4 sentences, specific to George's background]\n\nMix behavioral, situational, and technical questions relevant to this role.`
         )
       }
+
       setOut(o => ({ ...o, [type]: result }))
     } catch (e) {
-      setOut(o => ({ ...o, [type]: `Error: ${e.message}` }))
+      setOut(o => ({ ...o, [type]: `❌ Error: ${e.message}\n\nTroubleshooting:\n• Check VITE_ANTHROPIC_API_KEY is set in Vercel environment variables\n• Redeploy after adding/changing env vars\n• Try again — may be a temporary API timeout` }))
     }
     setLoading(l => ({ ...l, [type]: false }))
   }
@@ -141,7 +172,7 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
   const stepDone = (id) => {
     if (id === 'variant') return !!variant
     if (id === 'log') return applied
-    return !!out[id]
+    return !!out[id === 'qa' ? 'qa' : id]
   }
 
   return (
@@ -184,43 +215,30 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
               {role.pay_rate && role.pay_rate !== 'TBD' && <><span>·</span><span style={{ color: 'var(--accent)' }}>{role.pay_rate}</span></>}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: 4 }}
-          >
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: 4 }}>
             <X size={16} />
           </button>
         </div>
 
         {/* Step tabs */}
-        <div style={{
-          display: 'flex',
-          borderBottom: '1px solid var(--border)',
-          overflowX: 'auto',
-        }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', overflowX: 'auto' }}>
           {STEPS.map((s, i) => (
             <button
               key={s.id}
               onClick={() => setStep(s.id)}
               style={{
-                flex: '1 0 auto',
-                padding: '10px 8px',
-                background: 'none',
-                border: 'none',
+                flex: '1 0 auto', padding: '10px 8px',
+                background: 'none', border: 'none',
                 borderBottom: step === s.id ? '2px solid var(--accent)' : '2px solid transparent',
                 color: step === s.id ? 'var(--accent)' : stepDone(s.id) ? 'var(--success)' : 'var(--text3)',
-                fontSize: 11,
-                fontFamily: 'var(--font-mono)',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
+                fontSize: 11, fontFamily: 'var(--font-mono)', cursor: 'pointer', whiteSpace: 'nowrap',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
               }}
             >
               <span style={{
                 width: 18, height: 18, borderRadius: '50%',
                 background: step === s.id ? 'rgba(0,212,170,0.15)' : stepDone(s.id) ? 'rgba(62,207,142,0.15)' : 'var(--bg3)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 9,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9,
               }}>
                 {stepDone(s.id) ? '✓' : i + 1}
               </span>
@@ -242,9 +260,7 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: '9px 12px',
                   border: `1.5px solid ${variant === v.id ? v.accent : 'var(--border)'}`,
-                  borderRadius: 'var(--radius)',
-                  marginBottom: 8,
-                  cursor: 'pointer',
+                  borderRadius: 'var(--radius)', marginBottom: 8, cursor: 'pointer',
                   background: variant === v.id ? 'var(--bg3)' : 'transparent',
                   transition: 'border-color .15s',
                 }}>
@@ -265,7 +281,6 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>ATS-Optimize Resume</div>
 
-              {/* JD fetch status banner */}
               {jdFetching && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'rgba(0,153,255,0.08)', border: '1px solid rgba(0,153,255,0.2)', borderRadius: 'var(--radius)', marginBottom: 10, fontSize: 11, color: 'var(--accent2)' }}>
                   <Loader size={11} className="spin" /> Fetching job description from posting...
@@ -293,9 +308,16 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
                   fontSize: 11, resize: 'vertical', marginBottom: 10, fontFamily: 'var(--font-mono)',
                 }}
               />
-              <button className="btn btn-accent" style={{ width: '100%', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={() => run('ats')} disabled={loading.ats || jdFetching}>
+
+              <button
+                className="btn btn-accent"
+                style={{ width: '100%', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                onClick={() => run('ats')}
+                disabled={loading.ats || jdFetching}
+              >
                 {loading.ats ? <><Loader size={12} className="spin" /> Optimizing...</> : '✨ Optimize Bullets for This Role'}
               </button>
+
               {out.ats && <OutputBox text={out.ats} label="Optimized bullets" copyKey="ats" copied={copied} onCopy={copy} />}
             </div>
           )}
@@ -305,7 +327,12 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Cover Letter</div>
               <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 12 }}>Tailored to this specific role and company.</div>
-              <button className="btn btn-accent" style={{ width: '100%', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={() => run('cover')} disabled={loading.cover}>
+              <button
+                className="btn btn-accent"
+                style={{ width: '100%', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                onClick={() => run('cover')}
+                disabled={loading.cover}
+              >
                 {loading.cover ? <><Loader size={12} className="spin" /> Writing...</> : '✍️ Generate Cover Letter'}
               </button>
               {out.cover && <OutputBox text={out.cover} label="Cover letter" copyKey="cover" copied={copied} onCopy={copy} />}
@@ -317,7 +344,12 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Recruiter Q&A Prep</div>
               <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 12 }}>8 likely questions with STAR answers tailored to this role.</div>
-              <button className="btn btn-accent" style={{ width: '100%', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={() => run('qa')} disabled={loading.qa}>
+              <button
+                className="btn btn-accent"
+                style={{ width: '100%', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                onClick={() => run('qa')}
+                disabled={loading.qa}
+              >
                 {loading.qa ? <><Loader size={12} className="spin" /> Generating...</> : '🎤 Generate Interview Prep'}
               </button>
               {out.qa && <OutputBox text={out.qa} label="Q&A prep (8 questions)" copyKey="qa" copied={copied} onCopy={copy} />}
@@ -407,16 +439,10 @@ function OutputBox({ text, label, copyKey, copied, onCopy }) {
         </button>
       </div>
       <pre style={{
-        fontFamily: 'var(--font-mono)',
-        fontSize: 11, lineHeight: 1.65,
-        color: 'var(--text2)',
-        padding: '10px 12px',
-        margin: 0,
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
-        maxHeight: 300,
-        overflowY: 'auto',
-        background: 'var(--bg)',
+        fontFamily: 'var(--font-mono)', fontSize: 11, lineHeight: 1.65,
+        color: 'var(--text2)', padding: '10px 12px', margin: 0,
+        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+        maxHeight: 300, overflowY: 'auto', background: 'var(--bg)',
       }}>{text}</pre>
     </div>
   )
