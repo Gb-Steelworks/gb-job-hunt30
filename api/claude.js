@@ -10,7 +10,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
  
   const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return res.status(500).json({ error: 'Missing VITE_ANTHROPIC_API_KEY' })
+  if (!apiKey) return res.status(500).json({ error: `ANTHROPIC_API_KEY not found. Env keys present: ${Object.keys(process.env).filter(k=>k.includes('ANTHRO')||k.includes('API')).join(', ')}` })
  
   let body
   try {
