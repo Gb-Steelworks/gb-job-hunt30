@@ -1,169 +1,206 @@
-// ApplicationsPage.jsx — UPDATED
-// Changes from original:
-//   1. Accepts `pendingApplications` prop — auto-logged entries from RoleActionPanel
-//   2. useEffect merges pending apps in when they arrive (deduped by id)
-//   3. resume_version column added to table
-//   4. Everything else identical to your original
+// src/pages/ApplicationsPage.jsx
+// Full application pipeline: Applied → Reply → Interview Pending → Interviewed → Offer → Closed
 
-import { useState, useEffect } from 'react'
-import { Plus } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronRight, Star, ExternalLink, Clock, TrendingUp } from 'lucide-react'
 
-const STATUS_OPTIONS = ['Applied', 'Phone Screen', 'Interview', 'Offer', 'Rejected', 'Ghosted']
-const METHOD_OPTIONS = ['Direct Apply', 'Recruiter Submitted', 'Referral', 'LinkedIn Easy Apply']
+const STAGES = ['Applied', 'Reply', 'Interview Pending', 'Interviewed', 'Offer', 'Closed']
 
-export function ApplicationsPage({ pendingApplications = [] }) {
-  const [apps, setApps] = useState([])
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({
-    role_title: '', company: '', date_applied: '', recruiter_name: '', recruiter_email: '',
-    application_method: 'Direct Apply', resume_version: '', status: 'Applied', notes: '',
-    next_action: '', next_action_date: ''
-  })
+const STAGE_COLORS = {
+  'Applied':           { bg: 'rgba(0,153,255,0.12)',  border: 'rgba(0,153,255,0.3)',  text: '#3b82f6' },
+  'Reply':             { bg: 'rgba(251,146,60,0.12)', border: 'rgba(251,146,60,0.3)', text: '#fb923c' },
+  'Interview Pending': { bg: 'rgba(250,204,21,0.12)', border: 'rgba(250,204,21,0.3)', text: '#facc15' },
+  'Interviewed':       { bg: 'rgba(0,212,170,0.12)',  border: 'rgba(0,212,170,0.3)',  text: '#00d4aa' },
+  'Offer':             { bg: 'rgba(62,207,142,0.15)', border: 'rgba(62,207,142,0.4)', text: '#3ecf8e' },
+  'Closed':            { bg: 'rgba(120,120,120,0.12)',border: 'rgba(120,120,120,0.3)',text: '#888' },
+}
 
-  // Merge in any apps auto-logged from RoleActionPanel
-  useEffect(() => {
-    if (!pendingApplications.length) return
-    setApps(prev => {
-      const ids = new Set(prev.map(a => a.id))
-      const newOnes = pendingApplications
-        .filter(a => !ids.has(a.id))
-        .map(a => ({
-          id: a.id || Date.now(),
-          role_title: a.role_title,
-          company: a.company,
-          date_applied: a.date_applied || new Date().toISOString().split('T')[0],
-          recruiter_name: a.recruiter_name || a.contact_name || '',
-          recruiter_email: a.recruiter_email || a.contact_email || '',
-          application_method: 'Direct Apply',
-          resume_version: a.resume_version || a.resumeVariant || '',
-          status: 'Applied',
-          notes: '',
-          next_action: 'Follow up in 5 business days',
-          next_action_date: '',
-          cover_letter: a.cover_letter || false,
-        }))
-      return [...prev, ...newOnes]
-    })
-  }, [pendingApplications])
+function StageBadge({ status, onClick }) {
+  const c = STAGE_COLORS[status] || STAGE_COLORS['Applied']
+  return (
+    <button
+      onClick={onClick}
+      title="Click to advance stage"
+      style={{
+        background: c.bg, border: `1px solid ${c.border}`, color: c.text,
+        borderRadius: 20, padding: '3px 10px', fontSize: 10,
+        fontFamily: 'var(--font-mono)', fontWeight: 600, cursor: onClick ? 'pointer' : 'default',
+        whiteSpace: 'nowrap', transition: 'opacity .15s',
+      }}
+    >
+      {status}
+    </button>
+  )
+}
 
-  const f = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
+function StageBar({ current }) {
+  const idx = STAGES.indexOf(current)
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 20 }}>
+      {STAGES.map((s, i) => {
+        const done = i < idx
+        const active = i === idx
+        const c = STAGE_COLORS[s]
+        return (
+          <div key={s} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+            <div style={{
+              flex: 1, height: 4,
+              background: done || active ? c.text : 'var(--border)',
+              borderRadius: i === 0 ? '2px 0 0 2px' : i === STAGES.length - 1 ? '0 2px 2px 0' : 0,
+              transition: 'background .3s',
+            }} />
+            {i < STAGES.length - 1 && (
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: done ? c.text : 'var(--border)', flexShrink: 0 }} />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
-  const addApp = () => {
-    if (!form.role_title || !form.company) return
-    setApps(a => [...a, { id: Date.now(), ...form }])
-    setForm({
-      role_title: '', company: '', date_applied: '', recruiter_name: '', recruiter_email: '',
-      application_method: 'Direct Apply', resume_version: '', status: 'Applied', notes: '',
-      next_action: '', next_action_date: ''
-    })
-    setShowForm(false)
-  }
+export default function ApplicationsPage({ applications = [], onAdvanceStage, onSetStatus }) {
+  const [filter, setFilter] = useState('All')
+  const [selected, setSelected] = useState(null)
 
-  const updateStatus = (id, val) => setApps(apps.map(a => a.id === id ? { ...a, status: val } : a))
+  const filtered = filter === 'All' ? applications : applications.filter(a => a.status === filter)
 
-  const statusColor = (s) => {
-    const map = {
-      Applied: 'var(--accent2)', 'Phone Screen': 'var(--warn)', Interview: '#fb923c',
-      Offer: 'var(--success)', Rejected: 'var(--danger)', Ghosted: 'var(--text3)'
-    }
-    return map[s] || 'var(--text3)'
-  }
+  const counts = STAGES.reduce((acc, s) => {
+    acc[s] = applications.filter(a => a.status === s).length
+    return acc
+  }, { All: applications.length })
+
+  const app = applications.find(a => a.id === selected)
 
   return (
     <div className="page">
       <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div className="page-title">Applications</div>
-            <div className="page-sub">Track every submission · update status as you progress</div>
-          </div>
-          <button className="btn btn-accent" onClick={() => setShowForm(!showForm)}><Plus size={12} /> Log application</button>
-        </div>
+        <div className="page-title">Applications</div>
+        <div className="page-sub">Track every submission through offer — click a stage badge to advance</div>
       </div>
 
-      {showForm && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <div className="card-title">Log new application</div>
-          <div className="form-grid-3">
-            <div className="field"><label>Role title *</label><input type="text" placeholder="e.g. Sr. QA Analyst" value={form.role_title} onChange={e => f('role_title', e.target.value)} /></div>
-            <div className="field"><label>Company *</label><input type="text" placeholder="e.g. Enbridge" value={form.company} onChange={e => f('company', e.target.value)} /></div>
-            <div className="field"><label>Date applied</label><input type="text" placeholder="e.g. 2026-05-03" value={form.date_applied} onChange={e => f('date_applied', e.target.value)} /></div>
-            <div className="field"><label>Recruiter name</label><input type="text" value={form.recruiter_name} onChange={e => f('recruiter_name', e.target.value)} /></div>
-            <div className="field"><label>Recruiter email</label><input type="text" value={form.recruiter_email} onChange={e => f('recruiter_email', e.target.value)} /></div>
-            <div className="field"><label>Method</label><select value={form.application_method} onChange={e => f('application_method', e.target.value)}>{METHOD_OPTIONS.map(m => <option key={m}>{m}</option>)}</select></div>
-            <div className="field"><label>Resume variant</label>
-              <select value={form.resume_version} onChange={e => f('resume_version', e.target.value)}>
-                <option value="">— select —</option>
-                {['fsi','consulting','pm','qa','delivery'].map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
-            </div>
-            <div className="field"><label>Next action</label><input type="text" placeholder="e.g. Follow up in 5 days" value={form.next_action} onChange={e => f('next_action', e.target.value)} /></div>
-            <div className="field"><label>Next action date</label><input type="text" placeholder="e.g. 2026-05-08" value={form.next_action_date} onChange={e => f('next_action_date', e.target.value)} /></div>
-            <div className="field"><label>Status</label><select value={form.status} onChange={e => f('status', e.target.value)}>{STATUS_OPTIONS.map(s => <option key={s}>{s}</option>)}</select></div>
+      {/* KPI row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 8, marginBottom: 20 }}>
+        {[
+          { label: 'Total', val: applications.length, color: 'var(--text)' },
+          { label: 'Active', val: applications.filter(a => !['Closed'].includes(a.status)).length, color: 'var(--accent)' },
+          { label: 'Interviews', val: counts['Interview Pending'] + counts['Interviewed'], color: '#facc15' },
+          { label: 'Offers', val: counts['Offer'], color: 'var(--success)' },
+        ].map(k => (
+          <div key={k.label} className="card" style={{ padding: '12px 14px', textAlign: 'center' }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: k.color, fontFamily: 'var(--font-mono)' }}>{k.val}</div>
+            <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>{k.label}</div>
           </div>
-          <div className="field" style={{ marginBottom: 12 }}><label>Notes</label><textarea value={form.notes} onChange={e => f('notes', e.target.value)} /></div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-accent" onClick={addApp}>Save application</button>
-            <button className="btn" onClick={() => setShowForm(false)}>Cancel</button>
-          </div>
-        </div>
-      )}
+        ))}
+      </div>
 
-      {apps.length === 0 ? (
-        <div className="card">
-          <div className="empty">
-            <div className="empty-icon">📋</div>
-            No applications logged yet.<br />
-            Click "Prep ↗" on any lead and use Step 5 to auto-log, or click "Log application" above.
-          </div>
+      {/* Stage filter tabs */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+        {['All', ...STAGES].map(s => (
+          <button
+            key={s}
+            onClick={() => setFilter(s)}
+            style={{
+              padding: '5px 12px', borderRadius: 20, fontSize: 11,
+              fontFamily: 'var(--font-mono)', cursor: 'pointer',
+              background: filter === s ? 'var(--accent)' : 'var(--bg2)',
+              color: filter === s ? '#000' : 'var(--text3)',
+              border: `1px solid ${filter === s ? 'var(--accent)' : 'var(--border)'}`,
+              fontWeight: filter === s ? 700 : 400,
+            }}
+          >
+            {s} {counts[s] > 0 && <span style={{ opacity: .7 }}>({counts[s]})</span>}
+          </button>
+        ))}
+      </div>
+
+      {applications.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text3)' }}>
+          <TrendingUp size={28} style={{ opacity: .3, marginBottom: 10 }} />
+          <div style={{ fontSize: 14, marginBottom: 6 }}>No applications logged yet</div>
+          <div style={{ fontSize: 12 }}>Use the Prep panel on any lead → Step 5 to log your first application</div>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '24px', color: 'var(--text3)', fontSize: 13 }}>
+          No applications in this stage
         </div>
       ) : (
-        <div className="table-wrap">
-          <table>
-            <thead><tr>
-              <th style={{ width: 160 }}>Role</th>
-              <th style={{ width: 110 }}>Company</th>
-              <th style={{ width: 90 }}>Applied</th>
-              <th style={{ width: 110 }}>Recruiter</th>
-              <th style={{ width: 80 }}>Variant</th>
-              <th style={{ width: 110 }}>Status</th>
-              <th style={{ width: 130 }}>Next action</th>
-              <th>Notes</th>
-            </tr></thead>
-            <tbody>
-              {apps.map(a => (
-                <tr key={a.id}>
-                  <td style={{ fontWeight: 500, color: 'var(--text)' }}>{a.role_title}</td>
-                  <td style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{a.company}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text3)' }}>{a.date_applied || '—'}</td>
-                  <td style={{ fontSize: 11 }}>
-                    <div style={{ color: 'var(--text)' }}>{a.recruiter_name || '—'}</div>
-                    {a.recruiter_email && <div style={{ color: 'var(--text3)', fontFamily: 'var(--font-mono)', fontSize: 10 }}>{a.recruiter_email}</div>}
-                  </td>
-                  <td>
-                    {a.resume_version
-                      ? <span className="pill pill-qa" style={{ fontSize: 9 }}>{a.resume_version}</span>
-                      : <span style={{ color: 'var(--text3)', fontSize: 11 }}>—</span>
-                    }
-                  </td>
-                  <td>
-                    <select className="status-sel" value={a.status} onChange={e => updateStatus(a.id, e.target.value)} style={{ color: statusColor(a.status) }}>
-                      {STATUS_OPTIONS.map(s => <option key={s}>{s}</option>)}
-                    </select>
-                  </td>
-                  <td style={{ fontSize: 11 }}>
-                    {a.next_action && <div style={{ color: 'var(--text)' }}>{a.next_action}</div>}
-                    {a.next_action_date && <div style={{ color: 'var(--text3)', fontFamily: 'var(--font-mono)', fontSize: 10 }}>{a.next_action_date}</div>}
-                  </td>
-                  <td style={{ fontSize: 11, color: 'var(--text3)' }}>{a.notes || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div style={{ display: 'grid', gap: 8 }}>
+          {filtered.map(a => (
+            <div
+              key={a.id}
+              className="card"
+              style={{ cursor: 'pointer', transition: 'border-color .15s', borderColor: selected === a.id ? 'var(--accent)' : undefined }}
+              onClick={() => setSelected(selected === a.id ? null : a.id)}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {a.role_title}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <span>{a.company}</span>
+                    {a.date_applied && <><span>·</span><span><Clock size={9} style={{ verticalAlign: 'middle', marginRight: 3 }} />{a.date_applied}</span></>}
+                    {a.resume_version && <><span>·</span><span style={{ color: 'var(--accent2)' }}>{a.resume_version}</span></>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  <StageBadge
+                    status={a.status}
+                    onClick={(e) => { e.stopPropagation(); onAdvanceStage?.(a.id) }}
+                  />
+                  <ChevronRight size={12} color="var(--text3)" style={{ transform: selected === a.id ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }} />
+                </div>
+              </div>
+
+              {/* Expanded detail */}
+              {selected === a.id && (
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+                  <StageBar current={a.status} />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                    {[
+                      ['Type', a.type],
+                      ['Work model', a.work_model],
+                      ['Cover letter', a.cover_letter ? '✅ Yes' : '—'],
+                      ['Q&A prep', a.qa_prep ? '✅ Yes' : '—'],
+                      ['Recruiter', a.recruiter_name || '—'],
+                      ['Contact', a.recruiter_email || '—'],
+                    ].map(([k, v]) => (
+                      <div key={k}>
+                        <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 2 }}>{k}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text2)' }}>{v}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {STAGES.map(s => (
+                      <button
+                        key={s}
+                        onClick={(e) => { e.stopPropagation(); onSetStatus?.(a.id, s) }}
+                        style={{
+                          padding: '4px 10px', borderRadius: 20, fontSize: 10,
+                          fontFamily: 'var(--font-mono)', cursor: 'pointer',
+                          background: a.status === s ? STAGE_COLORS[s].bg : 'var(--bg)',
+                          color: a.status === s ? STAGE_COLORS[s].text : 'var(--text3)',
+                          border: `1px solid ${a.status === s ? STAGE_COLORS[s].border : 'var(--border)'}`,
+                          fontWeight: a.status === s ? 700 : 400,
+                        }}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                  {a.apply_link && (
+                    <a href={a.apply_link} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: 11, color: 'var(--accent2)' }}>
+                      <ExternalLink size={11} /> View posting
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
   )
 }
-
-export default ApplicationsPage
