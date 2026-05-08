@@ -1,17 +1,16 @@
-// RoleActionPanel.jsx
-// Drop into src/components/
-// Triggered by "Prep ↗" button in LeadsPage. Pass the lead object as `role` prop.
+// src/components/RoleActionPanel.jsx
+// v2 — ATS step downloads edited .docx AND saves to GitHub
 
 import { useState, useEffect, useRef } from 'react'
-import { X, Copy, Check, ChevronRight, Loader } from 'lucide-react'
+import { X, Copy, Check, ChevronRight, Loader, Download } from 'lucide-react'
 import { suggestVariant } from '../pages/ResumeVaultPage.jsx'
 
 const VARIANTS = [
-  { id: 'fsi',       label: 'FSI / Banking',          accent: 'var(--accent2)' },
-  { id: 'consulting',label: 'Consulting',              accent: 'var(--success)' },
-  { id: 'pm',        label: 'Project / Product Mgmt',  accent: 'var(--accent)' },
-  { id: 'qa',        label: 'Testing / QA',            accent: 'var(--warn)' },
-  { id: 'delivery',  label: 'Delivery Management',     accent: '#fb923c' },
+  { id: 'fsi',       label: 'FSI / Banking',          file: 'George_Brooks_Resume_FSI.docx',          accent: 'var(--accent2)' },
+  { id: 'consulting',label: 'Consulting',              file: 'George_Brooks_Resume_Consulting.docx',   accent: 'var(--success)' },
+  { id: 'pm',        label: 'Project / Product Mgmt', file: 'George_Brooks_Resume_PM_Product.docx',   accent: 'var(--accent)' },
+  { id: 'qa',        label: 'Testing / QA',            file: 'George_Brooks_Resume_Testing_QA.docx',   accent: 'var(--warn)' },
+  { id: 'delivery',  label: 'Delivery Management',    file: 'George_Brooks_Resume_Delivery_Management.docx', accent: '#fb923c' },
 ]
 
 const STEPS = [
@@ -32,7 +31,6 @@ Tools: JIRA, Confluence, Power BI, Selenium, Smartsheet, Azure, Visio, IBM CLM.
 Results: $10M+ regulatory risk mitigation, 90% faster system resolution, $200K release savings,
 30% faster testing cycles, 50% faster incident resolution, 35-40% fraud reduction (IRS 651M users).`
 
-// ─── Claude API helper — robust error handling ─────────────────────────────
 async function claude(system, user) {
   let res
   try {
@@ -41,7 +39,7 @@ async function claude(system, user) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 1000,
+        max_tokens: 1200,
         system,
         messages: [{ role: 'user', content: user }],
       }),
@@ -50,7 +48,6 @@ async function claude(system, user) {
     throw new Error(`Network error — check your connection (${networkErr.message})`)
   }
 
-  // Try to parse JSON — if it fails, surface the raw response text
   let data
   try {
     data = await res.json()
@@ -59,33 +56,37 @@ async function claude(system, user) {
     throw new Error(`API returned non-JSON response: ${raw.slice(0, 200)}`)
   }
 
-  // Handle error shapes from both Anthropic API and the Vercel proxy
   if (!res.ok || data.error) {
     const msg =
       (typeof data.error === 'string' && data.error) ||
       data.error?.message ||
       data.message ||
       data.detail ||
-      `HTTP ${res.status} — check VITE_ANTHROPIC_API_KEY in Vercel`
+      `HTTP ${res.status} — check ANTHROPIC_API_KEY in Vercel`
     throw new Error(msg)
   }
 
-  // Extract text from content blocks
   const text = data.content?.map(b => b.text || '').join('').trim()
   if (!text) throw new Error('Empty response from API — try again')
   return text
 }
 
 export default function RoleActionPanel({ role, onClose, onApplied }) {
-  const [step, setStep] = useState('variant')
-  const [variant, setVariant] = useState(null)
-  const [jd, setJd] = useState('')
+  const [step, setStep]           = useState('variant')
+  const [variant, setVariant]     = useState(null)
+  const [jd, setJd]               = useState('')
   const [jdFetching, setJdFetching] = useState(false)
-  const [jdFetched, setJdFetched] = useState(false)
-  const [out, setOut] = useState({ ats: '', cover: '', qa: '' })
-  const [loading, setLoading] = useState({ ats: false, cover: false, qa: false })
-  const [copied, setCopied] = useState(null)
-  const [applied, setApplied] = useState(false)
+  const [jdFetched, setJdFetched]   = useState(false)
+  const [out, setOut]             = useState({ ats: '', cover: '', qa: '' })
+  const [loading, setLoading]     = useState({ ats: false, cover: false, qa: false })
+  const [copied, setCopied]       = useState(null)
+  const [applied, setApplied]     = useState(false)
+
+  // Resume download state
+  const [resumeBuilding, setResumeBuilding] = useState(false)
+  const [resumeStatus, setResumeStatus]     = useState(null) // null | 'done' | 'error'
+  const [resumeFilename, setResumeFilename] = useState('')
+
   const overlayRef = useRef()
 
   useEffect(() => {
@@ -107,9 +108,7 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
           setJdFetched(true)
         }
       })
-      .catch(() => {
-        // Silent fail on auto-fetch — user can paste manually
-      })
+      .catch(() => {})
       .finally(() => setJdFetching(false))
   }, [role?.id])
 
@@ -117,9 +116,10 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
 
   const roleStr = `Title: ${role.role_title}\nCompany: ${role.company}\nLocation: ${role.work_model}\nType: ${role.type}\nPay: ${role.pay_rate || 'TBD'}`
 
+  // ── ATS optimize then download edited resume ────────────────────────────────
   const run = async (type) => {
     setLoading(l => ({ ...l, [type]: true }))
-    setOut(o => ({ ...o, [type]: '' })) // clear previous output
+    setOut(o => ({ ...o, [type]: '' }))
     try {
       const jdStr = jd.trim() ? `\n\nJob Description:\n${jd.trim()}` : ''
       let result = ''
@@ -143,9 +143,57 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
 
       setOut(o => ({ ...o, [type]: result }))
     } catch (e) {
-      setOut(o => ({ ...o, [type]: `❌ Error: ${e.message}\n\nTroubleshooting:\n• Check ANTHROPIC_API_KEY is set in Vercel (Production + Preview, no VITE_ prefix)\n• Redeploy after adding/changing env vars\n• Try again — may be a temporary API timeout` }))
+      setOut(o => ({ ...o, [type]: `❌ Error: ${e.message}\n\nTroubleshooting:\n• Check ANTHROPIC_API_KEY is set in Vercel (Production + Preview)\n• Redeploy after adding/changing env vars\n• Try again — may be a temporary API timeout` }))
     }
     setLoading(l => ({ ...l, [type]: false }))
+  }
+
+  // ── Build + download + save optimized resume ────────────────────────────────
+  const downloadResume = async () => {
+    if (!out.ats) return
+    setResumeBuilding(true)
+    setResumeStatus(null)
+
+    try {
+      const res = await fetch('/api/optimize-resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bullets: out.ats,
+          role: { role_title: role.role_title, company: role.company },
+          variant,
+        }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
+        throw new Error(err.error || `Server error ${res.status}`)
+      }
+
+      // Get filename from header if available
+      const disposition = res.headers.get('Content-Disposition') || ''
+      const filenameMatch = disposition.match(/filename="?([^"]+)"?/)
+      const fname = filenameMatch ? filenameMatch[1] : `George_Brooks_Resume_${role.role_title.replace(/\s+/g, '_')}_ATS.docx`
+      setResumeFilename(fname)
+
+      // Trigger browser download
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = fname
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      setResumeStatus('done')
+    } catch (e) {
+      setResumeStatus('error')
+      setOut(o => ({ ...o, ats: o.ats + `\n\n❌ Resume build failed: ${e.message}` }))
+    }
+
+    setResumeBuilding(false)
   }
 
   const copy = async (text, key) => {
@@ -158,11 +206,10 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
     setApplied(true)
     onApplied?.({
       ...role,
-      role_title: role.role_title,
-      company: role.company,
       date_applied: new Date().toISOString().split('T')[0],
       resume_version: variant,
       cover_letter: !!out.cover,
+      qa_prep: !!out.qa,
       status: 'Applied',
       recruiter_name: role.contact_name || '',
       recruiter_email: role.contact_email || '',
@@ -171,47 +218,26 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
 
   const stepDone = (id) => {
     if (id === 'variant') return !!variant
-    if (id === 'log') return applied
+    if (id === 'log')     return applied
     return !!out[id === 'qa' ? 'qa' : id]
   }
+
+  const variantLabel = VARIANTS.find(v => v.id === variant)?.label || variant
 
   return (
     <div
       ref={overlayRef}
       onClick={e => e.target === overlayRef.current && onClose()}
-      style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.6)',
-        zIndex: 1000,
-        display: 'flex',
-        justifyContent: 'flex-end',
-      }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }}
     >
-      <div style={{
-        width: 'min(540px, 100vw)',
-        background: 'var(--bg2)',
-        height: '100vh',
-        overflowY: 'auto',
-        borderLeft: '1px solid var(--border)',
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
+      <div style={{ width: 'min(560px, 100vw)', background: 'var(--bg2)', height: '100vh', overflowY: 'auto', borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+
         {/* Header */}
-        <div style={{
-          padding: '16px 20px',
-          borderBottom: '1px solid var(--border)',
-          background: 'var(--bg)',
-          position: 'sticky', top: 0, zIndex: 5,
-          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-        }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg)', position: 'sticky', top: 0, zIndex: 5, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>{role.role_title}</div>
             <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <span>{role.company}</span>
-              <span>·</span>
-              <span>{role.work_model}</span>
-              <span>·</span>
-              <span>{role.type}</span>
+              <span>{role.company}</span><span>·</span><span>{role.work_model}</span><span>·</span><span>{role.type}</span>
               {role.pay_rate && role.pay_rate !== 'TBD' && <><span>·</span><span style={{ color: 'var(--accent)' }}>{role.pay_rate}</span></>}
             </div>
           </div>
@@ -223,23 +249,14 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
         {/* Step tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', overflowX: 'auto' }}>
           {STEPS.map((s, i) => (
-            <button
-              key={s.id}
-              onClick={() => setStep(s.id)}
-              style={{
-                flex: '1 0 auto', padding: '10px 8px',
-                background: 'none', border: 'none',
-                borderBottom: step === s.id ? '2px solid var(--accent)' : '2px solid transparent',
-                color: step === s.id ? 'var(--accent)' : stepDone(s.id) ? 'var(--success)' : 'var(--text3)',
-                fontSize: 11, fontFamily: 'var(--font-mono)', cursor: 'pointer', whiteSpace: 'nowrap',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-              }}
-            >
-              <span style={{
-                width: 18, height: 18, borderRadius: '50%',
-                background: step === s.id ? 'rgba(0,212,170,0.15)' : stepDone(s.id) ? 'rgba(62,207,142,0.15)' : 'var(--bg3)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9,
-              }}>
+            <button key={s.id} onClick={() => setStep(s.id)} style={{
+              flex: '1 0 auto', padding: '10px 8px', background: 'none', border: 'none',
+              borderBottom: step === s.id ? '2px solid var(--accent)' : '2px solid transparent',
+              color: step === s.id ? 'var(--accent)' : stepDone(s.id) ? 'var(--success)' : 'var(--text3)',
+              fontSize: 11, fontFamily: 'var(--font-mono)', cursor: 'pointer', whiteSpace: 'nowrap',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            }}>
+              <span style={{ width: 18, height: 18, borderRadius: '50%', background: step === s.id ? 'rgba(0,212,170,0.15)' : stepDone(s.id) ? 'rgba(62,207,142,0.15)' : 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>
                 {stepDone(s.id) ? '✓' : i + 1}
               </span>
               {s.label}
@@ -254,19 +271,15 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
           {step === 'variant' && (
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Select Resume Variant</div>
-              <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 14 }}>Auto-suggested based on role. Override if needed.</div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 14 }}>Auto-suggested based on role. The selected variant is the file that gets ATS-optimized and downloaded.</div>
               {VARIANTS.map(v => (
-                <label key={v.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '9px 12px',
-                  border: `1.5px solid ${variant === v.id ? v.accent : 'var(--border)'}`,
-                  borderRadius: 'var(--radius)', marginBottom: 8, cursor: 'pointer',
-                  background: variant === v.id ? 'var(--bg3)' : 'transparent',
-                  transition: 'border-color .15s',
-                }}>
+                <label key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', border: `1.5px solid ${variant === v.id ? v.accent : 'var(--border)'}`, borderRadius: 'var(--radius)', marginBottom: 8, cursor: 'pointer', background: variant === v.id ? 'var(--bg3)' : 'transparent', transition: 'border-color .15s' }}>
                   <input type="radio" name="variant" value={v.id} checked={variant === v.id} onChange={() => setVariant(v.id)} hidden />
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: v.accent, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: variant === v.id ? 'var(--text)' : 'var(--text2)', flex: 1 }}>{v.label}</span>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: 12, color: variant === v.id ? 'var(--text)' : 'var(--text2)' }}>{v.label}</span>
+                    <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>{v.file}</div>
+                  </div>
                   {variant === v.id && <span style={{ fontSize: 10, color: v.accent }}>✓ selected</span>}
                 </label>
               ))}
@@ -301,12 +314,8 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
                 placeholder="Paste job description here, or wait for auto-fetch..."
                 value={jd}
                 onChange={e => setJd(e.target.value)}
-                rows={6}
-                style={{
-                  width: '100%', background: 'var(--bg)', border: `1px solid ${jdFetched ? 'rgba(62,207,142,0.3)' : 'var(--border)'}`,
-                  borderRadius: 'var(--radius)', color: 'var(--text)', padding: '8px 10px',
-                  fontSize: 11, resize: 'vertical', marginBottom: 10, fontFamily: 'var(--font-mono)',
-                }}
+                rows={5}
+                style={{ width: '100%', background: 'var(--bg)', border: `1px solid ${jdFetched ? 'rgba(62,207,142,0.3)' : 'var(--border)'}`, borderRadius: 'var(--radius)', color: 'var(--text)', padding: '8px 10px', fontSize: 11, resize: 'vertical', marginBottom: 10, fontFamily: 'var(--font-mono)' }}
               />
 
               <button
@@ -318,7 +327,60 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
                 {loading.ats ? <><Loader size={12} className="spin" /> Optimizing...</> : '✨ Optimize Bullets for This Role'}
               </button>
 
-              {out.ats && <OutputBox text={out.ats} label="Optimized bullets" copyKey="ats" copied={copied} onCopy={copy} />}
+              {out.ats && (
+                <>
+                  <OutputBox text={out.ats} label={`Optimized bullets → ${variantLabel} variant`} copyKey="ats" copied={copied} onCopy={copy} />
+
+                  {/* Download + GitHub save button */}
+                  <div style={{ marginTop: 12 }}>
+                    <button
+                      onClick={downloadResume}
+                      disabled={resumeBuilding}
+                      style={{
+                        width: '100%', padding: '11px 14px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        background: resumeStatus === 'done'
+                          ? 'rgba(62,207,142,0.12)'
+                          : resumeStatus === 'error'
+                          ? 'rgba(248,113,113,0.1)'
+                          : 'rgba(59,158,255,0.1)',
+                        border: `1px solid ${resumeStatus === 'done' ? 'rgba(62,207,142,0.35)' : resumeStatus === 'error' ? 'rgba(248,113,113,0.3)' : 'rgba(59,158,255,0.3)'}`,
+                        borderRadius: 'var(--radius)',
+                        color: resumeStatus === 'done' ? 'var(--success)' : resumeStatus === 'error' ? 'var(--danger)' : 'var(--accent2)',
+                        fontWeight: 600, fontSize: 13,
+                        cursor: resumeBuilding ? 'not-allowed' : 'pointer',
+                        opacity: resumeBuilding ? 0.7 : 1,
+                        fontFamily: 'var(--font)',
+                        transition: 'all .2s',
+                      }}
+                    >
+                      {resumeBuilding ? (
+                        <><Loader size={14} className="spin" /> Building resume...</>
+                      ) : resumeStatus === 'done' ? (
+                        <><Check size={14} /> Downloaded — click to download again</>
+                      ) : resumeStatus === 'error' ? (
+                        <>❌ Build failed — retry</>
+                      ) : (
+                        <><Download size={14} /> Insert bullets into resume &amp; download .docx</>
+                      )}
+                    </button>
+
+                    {resumeStatus === 'done' && (
+                      <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(62,207,142,0.06)', border: '1px solid rgba(62,207,142,0.15)', borderRadius: 'var(--radius)', fontSize: 11, color: 'var(--success)' }}>
+                        <div style={{ fontWeight: 600, marginBottom: 3 }}>✅ Resume ready</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text3)' }}>
+                          📥 Downloaded to your machine<br />
+                          ☁️ Saved to GitHub → /public/resumes/{resumeFilename || '…'}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 6, fontFamily: 'var(--font-mono)', lineHeight: 1.6 }}>
+                      Pulls your <strong style={{ color: 'var(--text2)' }}>{VARIANTS.find(v => v.id === variant)?.file}</strong> from GitHub → injects ATS bullets → downloads + saves as new file
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -342,7 +404,7 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
           {/* Step 4: Q&A */}
           {step === 'qa' && (
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Recruiter Q&A Prep</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Recruiter Q&amp;A Prep</div>
               <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 12 }}>8 likely questions with STAR answers tailored to this role.</div>
               <button
                 className="btn btn-accent"
@@ -378,16 +440,12 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
                       ['Company', role.company],
                       ['Type', role.type],
                       ['Work model', role.work_model],
-                      ['Resume variant', variant || '—'],
+                      ['Resume variant', variantLabel],
+                      ['ATS resume', resumeStatus === 'done' ? '✅ Downloaded + saved to GitHub' : '⬜ Not generated'],
                       ['Cover letter', out.cover ? '✅ Ready' : '⬜ Not generated'],
                       ['Q&A prep', out.qa ? '✅ Ready' : '⬜ Not generated'],
                     ].map(([k, v], i, arr) => (
-                      <div key={k} style={{
-                        display: 'flex', justifyContent: 'space-between',
-                        padding: '8px 14px',
-                        borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none',
-                        fontSize: 12,
-                      }}>
+                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 14px', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none', fontSize: 12 }}>
                         <span style={{ color: 'var(--text3)' }}>{k}</span>
                         <span style={{ color: 'var(--text)', fontWeight: 500 }}>{v}</span>
                       </div>
@@ -395,14 +453,7 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
                   </div>
                   <button
                     onClick={handleApply}
-                    style={{
-                      width: '100%', padding: '10px',
-                      background: 'rgba(62,207,142,0.15)',
-                      border: '1px solid rgba(62,207,142,0.4)',
-                      borderRadius: 'var(--radius)',
-                      color: 'var(--success)', fontWeight: 600, fontSize: 13,
-                      cursor: 'pointer',
-                    }}
+                    style={{ width: '100%', padding: '10px', background: 'rgba(62,207,142,0.15)', border: '1px solid rgba(62,207,142,0.4)', borderRadius: 'var(--radius)', color: 'var(--success)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
                   >
                     🎯 Mark as Applied — Add to Applications Tracker
                   </button>
@@ -424,26 +475,15 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
 function OutputBox({ text, label, copyKey, copied, onCopy }) {
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '6px 10px', background: 'var(--bg3)',
-        borderBottom: '1px solid var(--border)',
-        fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)',
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'var(--bg3)', borderBottom: '1px solid var(--border)', fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>
         <span>{label}</span>
-        <button
-          onClick={() => onCopy(text, copyKey)}
-          style={{ background: 'none', border: 'none', color: copied === copyKey ? 'var(--success)' : 'var(--accent2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 10 }}
-        >
+        <button onClick={() => onCopy(text, copyKey)} style={{ background: 'none', border: 'none', color: copied === copyKey ? 'var(--success)' : 'var(--accent2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 10 }}>
           {copied === copyKey ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy</>}
         </button>
       </div>
-      <pre style={{
-        fontFamily: 'var(--font-mono)', fontSize: 11, lineHeight: 1.65,
-        color: 'var(--text2)', padding: '10px 12px', margin: 0,
-        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-        maxHeight: 300, overflowY: 'auto', background: 'var(--bg)',
-      }}>{text}</pre>
+      <pre style={{ fontFamily: 'var(--font-mono)', fontSize: 11, lineHeight: 1.65, color: 'var(--text2)', padding: '10px 12px', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 300, overflowY: 'auto', background: 'var(--bg)' }}>
+        {text}
+      </pre>
     </div>
   )
 }
