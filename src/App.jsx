@@ -56,7 +56,7 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'dashboard':
-        return <DashboardPage onNavigate={setPage} />
+  return <DashboardPage onNavigate={setPage} leads={store.leads} applications={store.applications} />
       case 'leads':
         return (
           <LeadsPage
