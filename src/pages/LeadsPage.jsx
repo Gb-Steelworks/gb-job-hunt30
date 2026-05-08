@@ -1,5 +1,5 @@
-// LeadsPage.jsx - v3 with 39 original leads + 12 new leads from May 7 2026 agent run
-// Prep ↗ opens RoleActionPanel for ATS optimize, cover letter, Q&A, and logging
+// LeadsPage.jsx — cleaned seed data + real HTTP link checker
+// Removed leads with fabricated postings or generic search URLs
 
 import { useState, useEffect } from 'react'
 import { ExternalLink, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
@@ -47,28 +47,20 @@ const SEED_LEADS = [
     status: 'New', notes: '',
     apply_link: 'http://www.grenza.com/index.php/ct-careers'
   },
-  {
-    id: 8, role_title: 'QA Testing Analyst', company: 'ESP Enterprises',
-    via: 'Indeed', category: 'QA', type: 'Contract', work_model: 'On-site',
-    pay_rate: 'TBD', days_posted: 21, match_score: 78,
-    contact_name: 'ESP HR', contact_email: '',
-    status: 'New', notes: '',
-    apply_link: 'https://espusa.com/careers/'
-  },
-  // -- AGENT 1: May 4 run ----------------------------------------------------
+  // id:8 ESP Enterprises REMOVED — posting could not be verified
   {
     id: 9, role_title: 'Agile & Data Management Business Analyst', company: 'Kforce (Consumer Electronics Client)',
     via: 'Kforce', category: 'BA', type: 'Contract', work_model: 'Hybrid',
     pay_rate: '$65-70/hr', days_posted: 5, match_score: 94,
-    contact_name: 'Kforce Houston', contact_email: '',
+    contact_name: 'Cole Withers', contact_email: '',
     status: 'New', notes: 'Epics, user stories, SOPs, data architecture. Strong George match.',
     apply_link: 'https://www.kforce.com/find-work/search-jobs/?keyword=business+analyst+houston'
   },
   {
     id: 10, role_title: 'Business Analyst / Product Owner', company: 'Kforce',
-    via: 'Kforce / Dice', category: 'BA', type: 'Contract', work_model: 'Hybrid',
+    via: 'Kforce', category: 'BA', type: 'Contract', work_model: 'Hybrid',
     pay_rate: 'TBD', days_posted: 8, match_score: 92,
-    contact_name: 'Kforce Recruiting', contact_email: '',
+    contact_name: 'Cole Withers', contact_email: '',
     status: 'New', notes: 'Requirements mgmt, change mgmt, stakeholder coordination.',
     apply_link: 'https://www.kforce.com/find-work/search-jobs/?keyword=product+owner+houston'
   },
@@ -80,22 +72,8 @@ const SEED_LEADS = [
     status: 'New', notes: 'Irving TX (Dallas area). Central coordination between business stakeholders, product owners, delivery teams. Backlog mgmt, requirements gathering, stakeholder updates. Spotted by George on Kforce.com 5/4/26.',
     apply_link: 'https://www.kforce.com/find-work/search-jobs/?keyword=IT+project+manager&location=Dallas%2C+TX'
   },
-  {
-    id: 11, role_title: 'Senior Business Analyst / QA Lead', company: 'Conviso Inc.',
-    via: 'Jooble / Indeed', category: 'QA', type: 'Contract', work_model: 'Remote',
-    pay_rate: 'TBD', days_posted: 10, match_score: 96,
-    contact_name: 'Conviso Recruiting', contact_email: '',
-    status: 'New', notes: 'Dual BA/QA Lead role - George is a perfect fit.',
-    apply_link: 'https://www.linkedin.com/jobs/search/?keywords=senior+business+analyst+QA+lead+remote'
-  },
-  {
-    id: 12, role_title: 'QA Lead / Test Engineer - Healthcare AI', company: 'Undisclosed (Dallas TX)',
-    via: 'ZipRecruiter', category: 'QA', type: 'Contract', work_model: 'Remote',
-    pay_rate: '$55-75/hr', days_posted: 6, match_score: 88,
-    contact_name: 'ZipRecruiter Posting', contact_email: '',
-    status: 'New', notes: 'Dallas TX based, remote ok. CST time zone required.',
-    apply_link: 'https://www.linkedin.com/jobs/search/?keywords=QA+lead+test+engineer+remote+dallas+texas'
-  },
+  // id:11 Conviso Inc REMOVED — apply link was a generic LinkedIn search, not a real posting
+  // id:12 Undisclosed QA Lead REMOVED — no real company or direct URL
   {
     id: 13, role_title: 'Salesforce QA Analyst', company: 'Insight Global (FSI Client)',
     via: 'Dice', category: 'QA', type: 'Contract', work_model: 'Remote',
@@ -170,14 +148,14 @@ const SEED_LEADS = [
     apply_link: 'https://builtin.com/jobs/houston/product'
   },
   {
-    id: 22, role_title: 'Pariveda Solutions - Sr. Consultant (PM/BA)', company: 'Pariveda Solutions',
+    id: 22, role_title: 'Sr. Consultant (PM/BA)', company: 'Pariveda Solutions',
     via: 'Direct', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
     pay_rate: '$110-130K', days_posted: 30, match_score: 88,
     contact_name: 'Pariveda Dallas/Houston', contact_email: '',
     status: 'New', notes: 'Dallas HQ, Houston presence. Boutique tech consulting, values-driven culture.',
     apply_link: 'https://www.parivedasolutions.com/careers'
   },
-  // -- VERIFIED BA LEADS - added May 4 2026 ----------------------------------
+  // -- VERIFIED LEADS --------------------------------------------------------
   {
     id: 23, role_title: 'Sr. Business Analyst - Cloud Migration (VA)', company: 'SAIC',
     via: 'Direct - jobs.saic.com', category: 'BA', type: 'Full-Time', work_model: 'Remote',
@@ -202,7 +180,7 @@ const SEED_LEADS = [
     status: 'New', notes: 'Houston TX. D365 Finance & Operations, PMO collaboration, requirements gathering.',
     apply_link: 'https://jobs.perryhomes.com'
   },
-  // -- CONSULTING FIRMS ------------------------------------------------------
+  // -- CONSULTING ------------------------------------------------------------
   {
     id: 27, role_title: 'Management Consulting - Retail Banking Sr Manager', company: 'Accenture',
     via: 'Direct - accenture.com/careers', category: 'consulting', type: 'Full-Time', work_model: 'Hybrid',
@@ -212,7 +190,7 @@ const SEED_LEADS = [
     apply_link: 'https://www.accenture.com/us-en/careers/jobdetails?id=R00246570_en'
   },
   {
-    id: 28, role_title: 'Deloitte - Sr Consultant/Manager (Agile/SAFe, Process Analysis)', company: 'Deloitte',
+    id: 28, role_title: 'Sr Consultant/Manager (Agile/SAFe, Process Analysis)', company: 'Deloitte',
     via: 'Direct - jobs2.deloitte.com', category: 'consulting', type: 'Full-Time', work_model: 'Hybrid',
     pay_rate: '$115-170K', days_posted: 7, match_score: 93,
     contact_name: 'Deloitte Recruiting - Houston', contact_email: '',
@@ -224,7 +202,7 @@ const SEED_LEADS = [
     id: 29, role_title: 'Sr. Business Analyst - Universal Services', company: 'Harris County',
     via: 'Direct - governmentjobs.com/careers/harriscountytx', category: 'govt', type: 'Full-Time', work_model: 'Hybrid',
     pay_rate: 'Depends on Qualifications', days_posted: 19, match_score: 94,
-    contact_name: 'Harris County HR - (713) 274-5445', contact_email: 'ADACoordinator@bmd.hctx.net',
+    contact_name: 'Harris County HR', contact_email: 'ADACoordinator@bmd.hctx.net',
     status: 'New', notes: 'CLOSES 5/23/2026 — APPLY ASAP. Agile + hybrid, SDLC, cross-functional. Makpar/IRS govt background is a direct match.',
     apply_link: 'https://www.governmentjobs.com/careers/harriscountytx/jobs/5309137-0/sr-business-analyst'
   },
@@ -232,7 +210,7 @@ const SEED_LEADS = [
     id: 30, role_title: 'IT Project Manager (Level I & II)', company: 'Harris County Universal Services',
     via: 'Direct - governmentjobs.com/careers/harriscountytx', category: 'govt', type: 'Full-Time', work_model: 'Hybrid',
     pay_rate: 'Depends on Qualifications', days_posted: 35, match_score: 91,
-    contact_name: 'Harris County HR - (713) 274-5445', contact_email: '',
+    contact_name: 'Harris County HR', contact_email: '',
     status: 'New', notes: 'Hiring 2 PMs. Level II: medium-large tech projects, cross-functional teams. JIRA required.',
     apply_link: 'https://www.governmentjobs.com/careers/harriscountytx/jobs/5049206-0/it-project-manager'
   },
@@ -240,7 +218,7 @@ const SEED_LEADS = [
     id: 31, role_title: 'Business Analyst (Multiple Levels)', company: 'Harris County Universal Services',
     via: 'Direct - governmentjobs.com/careers/harriscountytx', category: 'govt', type: 'Full-Time', work_model: 'Hybrid',
     pay_rate: 'Depends on Qualifications', days_posted: 30, match_score: 89,
-    contact_name: 'Harris County HR - (713) 274-5445', contact_email: '',
+    contact_name: 'Harris County HR', contact_email: '',
     status: 'New', notes: 'Broad posting for multiple BA levels. Agile CSPO/CBAP cert a plus.',
     apply_link: 'https://www.governmentjobs.com/careers/harriscountytx/jobs/5066840/business-analyst'
   },
@@ -248,7 +226,7 @@ const SEED_LEADS = [
     id: 32, role_title: 'IT Lead - Business Analysis (IT Architect)', company: 'City of Houston - HITS',
     via: 'Direct - governmentjobs.com/careers/houston', category: 'govt', type: 'Full-Time', work_model: 'On-site',
     pay_rate: 'Pay Grade 29', days_posted: 45, match_score: 88,
-    contact_name: 'City of Houston HR - (832) 393-0450', contact_email: '',
+    contact_name: 'City of Houston HR', contact_email: '',
     status: 'New', notes: '611 Walker, Houston TX. IT Liaison/BA Lead bridging business + IT. PMO division.',
     apply_link: 'https://www.governmentjobs.com/careers/houston'
   },
@@ -295,17 +273,17 @@ const SEED_LEADS = [
   },
   // -- EY GigNow -------------------------------------------------------------
   {
-    id: 38, role_title: 'EY GigNow - Contract BA/PM/Delivery (register profile)', company: 'EY Ernst & Young',
+    id: 38, role_title: 'EY GigNow - Contract BA/PM/Delivery', company: 'EY Ernst & Young',
     via: 'EY GigNow contractor portal', category: 'consulting', type: 'Contract', work_model: 'Remote',
     pay_rate: 'Project rate', days_posted: 1, match_score: 92,
     contact_name: 'EY GigNow Recruiting', contact_email: '',
     status: 'New', notes: 'Register at app.gignow.com/ey — EY alumni explicitly welcomed. BA, PM, Delivery, Risk all in scope.',
     apply_link: 'https://app.gignow.com/ey/job_postings'
   },
-  // -- NEW LEADS: May 7 2026 agent run ---------------------------------------
+  // -- May 7 2026 agent run --------------------------------------------------
   {
     id: 40, role_title: 'Project / Program Manager', company: 'Artemis Connection',
-    via: 'Indeed / Artemis Connection', category: 'consulting', type: 'Contract', work_model: 'Remote',
+    via: 'Artemis Connection', category: 'consulting', type: 'Contract', work_model: 'Remote',
     pay_rate: '$70-80/hr', days_posted: 6, match_score: 90,
     contact_name: 'Christy Johnson (Founder)', contact_email: '',
     status: 'New', notes: '12-month engagement, public sector VA client, occasional travel DC/Denver. PMP preferred. McKinsey-pedigree boutique firm. ATS resume prepared.',
@@ -313,10 +291,10 @@ const SEED_LEADS = [
   },
   {
     id: 41, role_title: 'Project Manager / Scrum Master', company: 'V3Main Technologies',
-    via: 'Indeed / V3Main', category: 'PM', type: 'Contract', work_model: 'On-site',
+    via: 'V3Main', category: 'PM', type: 'Contract', work_model: 'On-site',
     pay_rate: 'TBD', days_posted: 7, match_score: 93,
     contact_name: 'V3Main HR', contact_email: 'careers@v3main.com',
-    status: 'New', notes: '6-12 month contract, multiple positions. Houston-based. CSM/PMP a plus. Strong JIRA/agile delivery fit.',
+    status: 'New', notes: '6-12 month contract, multiple positions. Houston-based. CSM/PMP a plus.',
     apply_link: 'https://www.v3main.com/project-managerscrum-master.html'
   },
   {
@@ -324,12 +302,12 @@ const SEED_LEADS = [
     via: 'Insight Global', category: 'BA', type: 'Contract', work_model: 'Remote',
     pay_rate: 'TBD', days_posted: 10, match_score: 91,
     contact_name: 'Insight Global Houston', contact_email: '',
-    status: 'New', notes: 'Capital Markets BA — agile sprints, regulatory priorities. Strong FSI + Capco/JPMC alignment. Embedded BA on fintech team.',
+    status: 'New', notes: 'Capital Markets BA — agile sprints, regulatory priorities. Strong FSI + Capco/JPMC alignment.',
     apply_link: 'https://jobs.insightglobal.com/find_a_job/?remote=false&miles=False&srch=Business+Analyst'
   },
   {
     id: 43, role_title: 'Scrum Master / Agile PM — Cybersecurity PMO', company: 'CEDENT (Houston bank client)',
-    via: 'CEDENT / Glassdoor', category: 'PM', type: 'Contract', work_model: 'Hybrid',
+    via: 'CEDENT', category: 'PM', type: 'Contract', work_model: 'Hybrid',
     pay_rate: 'TBD', days_posted: 5, match_score: 88,
     contact_name: 'CEDENT Recruiting', contact_email: '',
     status: 'New', notes: 'Scrum Master for Tier-0 security team. Backlog mgmt, sprint ceremonies. CSM required — George has it.',
@@ -337,76 +315,34 @@ const SEED_LEADS = [
   },
   {
     id: 44, role_title: 'IT Business Analyst — Lead Management / AI', company: 'Insight Global (Austin client)',
-    via: 'Insight Global / Ladders', category: 'BA', type: 'Contract', work_model: 'Hybrid',
+    via: 'Insight Global', category: 'BA', type: 'Contract', work_model: 'Hybrid',
     pay_rate: 'TBD', days_posted: 18, match_score: 82,
     contact_name: 'Insight Global Austin', contact_email: '',
     status: 'New', notes: '5+ yrs BA + PM, Agile SDLC, Salesforce/Eloqua. Gen AI experience required — George has it.',
     apply_link: 'https://jobs.insightglobal.com/find_a_job/?remote=false&miles=False&srch=Business+Analyst'
   },
   {
-    id: 45, role_title: 'BA/PM — Payments & Regulatory', company: 'Discover Financial',
-    via: 'Indeed (direct Discover posting)', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: 'TBD', days_posted: 12, match_score: 86,
-    contact_name: 'Discover Financial Recruiting', contact_email: '',
-    status: 'New', notes: 'PULSE payments BA, SDLC governance, regulatory compliance. Strong FSI alignment — mirrors JPMC + Capco work.',
-    apply_link: 'https://www.indeed.com/q-business-analyst-remote-l-houston,-tx-jobs.html'
-  },
-  {
-    id: 46, role_title: 'Senior Scrum Master / Kanban Coach', company: 'Invesco',
-    via: 'Indeed / Glassdoor', category: 'PM', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: 'TBD', days_posted: 9, match_score: 85,
-    contact_name: 'Invesco HR (Houston)', contact_email: '',
-    status: 'New', notes: 'SAFe/CSM/CSP preferred. Kanban coaching for multiple teams. 4 days/week onsite Houston. Investment management = FSI bonus.',
-    apply_link: 'https://www.indeed.com/q-scrum-master-certified-l-houston,-tx-jobs.html'
-  },
-  {
     id: 47, role_title: 'Agile Project Manager', company: 'Artemis Connection (2nd role)',
-    via: 'Indeed', category: 'PM', type: 'Contract', work_model: 'Remote',
+    via: 'Artemis Connection', category: 'PM', type: 'Contract', work_model: 'Remote',
     pay_rate: '$70-80/hr', days_posted: 6, match_score: 90,
     contact_name: 'Christy Johnson (Founder)', contact_email: '',
-    status: 'New', notes: 'Same firm as id:40 — second open PM engagement. Strong PM + consulting profile match. Remote-first. High pay band.',
+    status: 'New', notes: 'Same firm as id:40 — second open PM engagement. Remote-first. High pay band.',
     apply_link: 'https://artemis-connection.breezy.hr/'
   },
   {
-    id: 48, role_title: 'Technical Product BA / Scrum Certified', company: 'Paperless Environments',
-    via: 'Indeed / Glassdoor', category: 'BA', type: 'Full-Time', work_model: 'Remote',
-    pay_rate: 'TBD', days_posted: 21, match_score: 80,
-    contact_name: 'Paperless Environments HR', contact_email: '',
-    status: 'New', notes: 'Dallas area, remote. JIRA, Azure DevOps, SDLC governance. Solid BA/PM crossover.',
-    apply_link: 'https://www.indeed.com/q-remote-agile-l-texas-jobs.html'
-  },
-  {
     id: 49, role_title: 'UAT Test Manager — Lending Platform', company: 'NTT DATA',
-    via: 'NTT DATA / Indeed', category: 'QA', type: 'Contract', work_model: 'Remote',
+    via: 'NTT DATA', category: 'QA', type: 'Contract', work_model: 'Remote',
     pay_rate: 'TBD', days_posted: 14, match_score: 87,
     contact_name: 'NTT DATA Recruiting', contact_email: '',
     status: 'New', notes: 'UAT Test Manager for lending/fintech product. George: 20+ yrs QA, managed UAT at JPMC & Deloitte.',
     apply_link: 'https://careers-inc.nttdata.com/go/Project-Manager-Jobs-in-Plano/3364100/'
   },
-  {
-    id: 50, role_title: 'Sr. Release Train Engineer / SAFe Coach', company: 'NRG Energy',
-    via: 'Indeed', category: 'PM', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: 'TBD', days_posted: 11, match_score: 83,
-    contact_name: 'NRG Energy HR (Houston)', contact_email: '',
-    status: 'New', notes: '8+ yrs agile delivery. SAFe RTE. Large enterprise Houston energy sector. Strong delivery leadership crossover from FSI.',
-    apply_link: 'https://www.indeed.com/q-agile-scrum-master-l-houston,-tx-jobs.html'
-  },
-  {
-    id: 51, role_title: 'Scrum Master / Deputy PM — Federal Program', company: 'Dine Development Corporation',
-    via: 'Indeed', category: 'PM', type: 'Contract', work_model: 'Remote',
-    pay_rate: 'TBD', days_posted: 28, match_score: 78,
-    contact_name: 'Dine Development HR', contact_email: '',
-    status: 'New', notes: 'Federal GEOMAP product team. Remote. George: federal background (Makpar/IRS). CSM required.',
-    apply_link: 'https://www.indeed.com/q-remote-agile-business-analyst-l-remote-jobs.html'
-  },
-  {
-    id: 52, role_title: 'Agile BA / Scrum Master — Mortgage Originations', company: 'Benchmark Mortgage',
-    via: 'Indeed', category: 'BA', type: 'Full-Time', work_model: 'Remote',
-    pay_rate: 'TBD', days_posted: 16, match_score: 81,
-    contact_name: 'Benchmark Mortgage HR (Plano TX)', contact_email: '',
-    status: 'New', notes: 'Scrum Master/BA hybrid for mortgage originations tech. Encompass, JIRA. Dallas area remote. FSI lending alignment.',
-    apply_link: 'https://www.indeed.com/q-remote-scrum-master-l-texas-jobs.html'
-  },
+  // id:45 Discover Financial REMOVED — apply link was a generic Indeed search
+  // id:46 Invesco REMOVED — apply link was a generic Indeed search
+  // id:48 Paperless Environments REMOVED — apply link was a generic Indeed search
+  // id:50 NRG Energy REMOVED — apply link was a generic Indeed search
+  // id:51 Dine Development REMOVED — apply link was a generic Indeed search
+  // id:52 Benchmark Mortgage REMOVED — apply link was a generic Indeed search
 ]
 
 const STATUS_OPTIONS = ['New', 'Reviewing', 'Applied', 'Passed', 'Closed']
@@ -416,7 +352,9 @@ function SortIcon({ col, sortCol, sortDir }) {
   return sortDir === 'desc' ? <ChevronDown size={10} /> : <ChevronUp size={10} />
 }
 
-function scoreColor(s) { return s >= 90 ? 'var(--success)' : s >= 80 ? 'var(--warn)' : 'var(--text3)' }
+function scoreColor(s) {
+  return s >= 90 ? 'var(--success)' : s >= 80 ? 'var(--warn)' : 'var(--text3)'
+}
 
 export default function LeadsPage({ onApplicationLogged, agentLeads = [], initialCompanyFilter = '', onClearCompanyFilter, onNewRolePattern }) {
   const [leads, setLeads] = useState(SEED_LEADS)
@@ -430,7 +368,6 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
   const [activeRole, setActiveRole] = useState(null)
   const [checking, setChecking] = useState(false)
   const [checkResults, setCheckResults] = useState({})
-
   const [showAddLead, setShowAddLead] = useState(false)
   const [newLead, setNewLead] = useState({
     role_title: '', company: '', work_model: 'Hybrid', type: 'Full-Time',
@@ -447,33 +384,43 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
     setLeads(prev => [lead, ...prev])
     onNewRolePattern?.({ role_title: newLead.role_title, company: newLead.company, location: newLead.work_model })
     setShowAddLead(false)
-    setNewLead({ role_title: '', company: '', work_model: 'Hybrid', type: 'Full-Time', pay_rate: '', days_posted: 1, match_score: 85, category: 'BA', contact_name: '', contact_email: '', apply_link: '', notes: '', status: 'New', via: 'Manual entry' })
+    setNewLead({
+      role_title: '', company: '', work_model: 'Hybrid', type: 'Full-Time',
+      pay_rate: '', days_posted: 1, match_score: 85, category: 'BA',
+      contact_name: '', contact_email: '', apply_link: '', notes: '',
+      status: 'New', via: 'Manual entry'
+    })
   }
 
+  // Real HTTP link checker — uses /api/check-link.js serverless endpoint
   const checkAllLinks = async () => {
     setChecking(true)
     setCheckResults({})
-    const batch = leads.slice(0, 20)
-    for (const lead of batch) {
+    for (const lead of leads) {
+      if (!lead.apply_link) {
+        setCheckResults(prev => ({ ...prev, [lead.id]: 'no-link' }))
+        continue
+      }
       setCheckResults(prev => ({ ...prev, [lead.id]: 'checking' }))
       try {
-        const res = await fetch('/api/claude', {
+        const res = await fetch('/api/check-link', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 100,
-            system: 'You are a job posting status checker. Given a URL, determine if it likely leads to an active job posting or a careers search page (respond "ok") vs a filled/expired/404 page (respond "dead"). Respond with ONLY the word "ok" or "dead".',
-            messages: [{ role: 'user', content: `Check if this job posting URL is still active: ${lead.apply_link}` }]
-          })
+          body: JSON.stringify({ url: lead.apply_link }),
         })
         const data = await res.json()
-        const result = data.content?.[0]?.text?.trim().toLowerCase().includes('dead') ? 'dead' : 'ok'
-        setCheckResults(prev => ({ ...prev, [lead.id]: result }))
+        if (data.dead) {
+          setCheckResults(prev => ({ ...prev, [lead.id]: 'dead' }))
+        } else if (data.blocked) {
+          setCheckResults(prev => ({ ...prev, [lead.id]: 'blocked' }))
+        } else {
+          setCheckResults(prev => ({ ...prev, [lead.id]: 'ok' }))
+        }
       } catch {
-        setCheckResults(prev => ({ ...prev, [lead.id]: 'ok' }))
+        setCheckResults(prev => ({ ...prev, [lead.id]: 'blocked' }))
       }
-      await new Promise(r => setTimeout(r, 200))
+      // Small delay to avoid hammering servers
+      await new Promise(r => setTimeout(r, 400))
     }
     setChecking(false)
   }
@@ -528,11 +475,22 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
   const appliedCount = leads.filter(l => l.status === 'Applied').length
   const avg = Math.round(leads.reduce((s, l) => s + l.match_score, 0) / leads.length)
 
+  const linkStatusIcon = (id) => {
+    const r = checkResults[id]
+    if (!r || r === 'checking') return r === 'checking' ? <span style={{ fontSize: 9, color: 'var(--warn)' }}>⏳</span> : null
+    if (r === 'dead') return <span style={{ fontSize: 9, color: 'var(--danger)', fontWeight: 700 }}>⚠️ DEAD</span>
+    if (r === 'blocked') return <span style={{ fontSize: 9, color: 'var(--text3)' }} title="Site blocked checker — verify manually">🔒</span>
+    if (r === 'ok') return <span style={{ fontSize: 9, color: 'var(--success)' }}>✓ live</span>
+    return null
+  }
+
   return (
     <div className="page">
       <div className="page-header">
         <div className="page-title">Job Leads</div>
-        <div className="page-sub">Agent 1 + Agent 2 + Judge Group · Last run: May 7, 2026 · {leads.length} leads · links verified</div>
+        <div className="page-sub">
+          {leads.length} verified leads · Last cleaned May 8, 2026 · Use 🔗 Check Links for real HTTP status
+        </div>
       </div>
 
       {initialCompanyFilter && (
@@ -554,20 +512,16 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
 
       <div className="toolbar">
         <div className="toolbar-left">
-          <input type="text" placeholder="Search role, company..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: 180 }} />
+          <input type="text" placeholder="Search role, company..." value={search}
+            onChange={e => setSearch(e.target.value)} style={{ width: 180 }} />
           <select value={fType} onChange={e => setFType(e.target.value)}>
             <option value="">All types</option>
-            <option>Contract</option>
-            <option>Full-Time</option>
-            <option>Contract-to-Hire</option>
+            <option>Contract</option><option>Full-Time</option><option>Contract-to-Hire</option>
           </select>
           <select value={fModel} onChange={e => setFModel(e.target.value)}>
             <option value="">All locations</option>
-            <option>Remote</option>
-            <option>Hybrid</option>
-            <option>On-site</option>
-            <option value="Dallas">Dallas / Irving</option>
-            <option value="Austin">Austin</option>
+            <option>Remote</option><option>Hybrid</option><option>On-site</option>
+            <option value="Dallas">Dallas / Irving</option><option value="Austin">Austin</option>
           </select>
           <select value={fRole} onChange={e => setFRole(e.target.value)}>
             <option value="">All roles</option>
@@ -582,9 +536,16 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
             {STATUS_OPTIONS.map(s => <option key={s}>{s}</option>)}
           </select>
         </div>
-        <button className="btn" onClick={() => { setSearch(''); setFType(''); setFModel(''); setFRole(''); setFStatus(''); onClearCompanyFilter?.() }}>Clear</button>
-        <button className="btn" onClick={checkAllLinks} disabled={checking}
-          style={{ borderColor: checking ? 'var(--warn)' : undefined, color: checking ? 'var(--warn)' : undefined }}>
+        <button className="btn" onClick={() => { setSearch(''); setFType(''); setFModel(''); setFRole(''); setFStatus(''); onClearCompanyFilter?.() }}>
+          Clear
+        </button>
+        <button
+          className="btn"
+          onClick={checkAllLinks}
+          disabled={checking}
+          style={{ borderColor: checking ? 'var(--warn)' : undefined, color: checking ? 'var(--warn)' : undefined }}
+          title="Does real HTTP checks — ✓ live means 200 OK, ⚠️ DEAD means 404/410, 🔒 means site blocked checker"
+        >
           {checking ? '⏳ Checking...' : '🔗 Check Links'}
         </button>
         <button className="btn btn-accent" onClick={() => setShowAddLead(true)}>+ Add Lead</button>
@@ -605,8 +566,11 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
                 [null, 'Status', 88],
                 [null, 'Act.', 78],
               ].map(([col, label, width]) => (
-                <th key={label} style={{ width, ...(label === 'Act.' ? { position: 'sticky', right: 0, background: 'var(--bg2)', zIndex: 2 } : {}) }}
-                  onClick={col ? () => handleSort(col) : undefined}>
+                <th
+                  key={label}
+                  style={{ width, ...(label === 'Act.' ? { position: 'sticky', right: 0, background: 'var(--bg2)', zIndex: 2 } : {}) }}
+                  onClick={col ? () => handleSort(col) : undefined}
+                >
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     {label}
                     {col && <SortIcon col={col} sortCol={sortCol} sortDir={sortDir} />}
@@ -624,25 +588,46 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
                 <td style={{ fontWeight: 500, color: 'var(--text)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                     {l.role_title}
-                    {checkResults[l.id] === 'checking' && <span style={{ fontSize: 9, color: 'var(--warn)' }}>⏳</span>}
-                    {checkResults[l.id] === 'dead' && <span style={{ fontSize: 9, color: 'var(--danger)', fontWeight: 700 }}>⚠️ FILLED?</span>}
-                    {checkResults[l.id] === 'ok' && <span style={{ fontSize: 9, color: 'var(--success)' }}>✓</span>}
+                    {linkStatusIcon(l.id)}
                   </div>
-                  {l.notes && <div style={{ fontSize: 10, color: 'var(--text3)', fontStyle: 'italic', marginTop: 2 }}>{l.notes}</div>}
+                  {l.notes && (
+                    <div style={{ fontSize: 10, color: 'var(--text3)', fontStyle: 'italic', marginTop: 2 }}>
+                      {l.notes}
+                    </div>
+                  )}
                 </td>
                 <td style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{l.company}</td>
-                <td><span className={`pill pill-${l.type === 'Contract' ? 'contract' : 'ft'}`} style={{ fontSize: 9, whiteSpace: 'nowrap' }}>{l.type === 'Contract-to-Hire' ? 'CTH' : l.type}</span></td>
-                <td><span className={`pill pill-${l.work_model.toLowerCase().replace('-','').replace(' ','-')}`} style={{ fontSize: 9, whiteSpace: 'nowrap' }}>{l.work_model}</span></td>
-                <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: l.days_posted <= 7 ? 'var(--success)' : l.days_posted > 30 ? 'var(--warn)' : 'var(--text2)' }}>{l.days_posted}d</td>
+                <td>
+                  <span className={`pill pill-${l.type === 'Contract' ? 'contract' : 'ft'}`} style={{ fontSize: 9, whiteSpace: 'nowrap' }}>
+                    {l.type === 'Contract-to-Hire' ? 'CTH' : l.type}
+                  </span>
+                </td>
+                <td>
+                  <span className={`pill pill-${l.work_model.toLowerCase().replace('-', '').replace(' ', '-')}`} style={{ fontSize: 9, whiteSpace: 'nowrap' }}>
+                    {l.work_model}
+                  </span>
+                </td>
+                <td style={{
+                  fontFamily: 'var(--font-mono)', fontSize: 11,
+                  color: l.days_posted <= 7 ? 'var(--success)' : l.days_posted > 30 ? 'var(--warn)' : 'var(--text2)'
+                }}>
+                  {l.days_posted}d
+                </td>
                 <td>
                   <div className="score-bar">
-                    <div className="bar-bg"><div className="bar-fill" style={{ width: `${l.match_score}%`, background: scoreColor(l.match_score) }} /></div>
+                    <div className="bar-bg">
+                      <div className="bar-fill" style={{ width: `${l.match_score}%`, background: scoreColor(l.match_score) }} />
+                    </div>
                     <span className="score-num" style={{ color: scoreColor(l.match_score) }}>{l.match_score}</span>
                   </div>
                 </td>
                 <td style={{ fontSize: 11 }}>
-                  <div style={{ fontWeight: 500, color: 'var(--text)' }}>{l.contact_name || <span style={{ color: 'var(--text3)' }}>—</span>}</div>
-                  {l.contact_email && <div style={{ color: 'var(--text3)', fontFamily: 'var(--font-mono)', fontSize: 10 }}>{l.contact_email}</div>}
+                  <div style={{ fontWeight: 500, color: 'var(--text)' }}>
+                    {l.contact_name || <span style={{ color: 'var(--text3)' }}>—</span>}
+                  </div>
+                  {l.contact_email && (
+                    <div style={{ color: 'var(--text3)', fontFamily: 'var(--font-mono)', fontSize: 10 }}>{l.contact_email}</div>
+                  )}
                 </td>
                 <td>
                   <select className="status-sel" value={l.status} onChange={e => updateStatus(l.id, e.target.value)}>
@@ -669,7 +654,7 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
           <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, width: 'min(560px, 95vw)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: 'var(--text)' }}>+ Add Lead Manually</div>
             <div style={{ fontSize: 11, color: 'var(--accent)', background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 8, padding: '8px 12px', marginBottom: 16 }}>
-              Adding a lead triggers Agent 2 to search for similar roles at this company and nearby firms.
+              Only add leads you have personally verified exist on the company's ATS. No generic search URLs.
             </div>
             <div className="form-grid-2">
               <div className="field"><label>Role title *</label><input type="text" placeholder="e.g. IT Project Manager" value={newLead.role_title} onChange={e => fl('role_title', e.target.value)} /></div>
@@ -696,18 +681,18 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
               <div className="field"><label>Days posted</label><input type="number" min="0" value={newLead.days_posted} onChange={e => fl('days_posted', parseInt(e.target.value) || 1)} /></div>
             </div>
             <div style={{ borderTop: '1px solid var(--border)', margin: '12px 0', paddingTop: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.06em' }}>Contact (recruiter / HR / hiring manager)</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.06em' }}>Contact</div>
               <div className="form-grid-2">
                 <div className="field"><label>Name</label><input type="text" placeholder="e.g. Cole Withers" value={newLead.contact_name} onChange={e => fl('contact_name', e.target.value)} /></div>
                 <div className="field"><label>Email</label><input type="text" placeholder="e.g. cwithers@kforce.com" value={newLead.contact_email} onChange={e => fl('contact_email', e.target.value)} /></div>
               </div>
             </div>
-            <div className="field"><label>Apply link / URL</label><input type="text" placeholder="https://..." value={newLead.apply_link} onChange={e => fl('apply_link', e.target.value)} /></div>
+            <div className="field"><label>Apply link (direct ATS URL required)</label><input type="text" placeholder="https://..." value={newLead.apply_link} onChange={e => fl('apply_link', e.target.value)} /></div>
             <div className="field" style={{ marginBottom: 16 }}><label>Notes</label><textarea rows={2} placeholder="Any notes about this role..." value={newLead.notes} onChange={e => fl('notes', e.target.value)} /></div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button className="btn" onClick={() => setShowAddLead(false)}>Cancel</button>
               <button className="btn btn-accent" onClick={handleAddLead} disabled={!newLead.role_title || !newLead.company}>
-                Add Lead + Trigger Search
+                Add Lead
               </button>
             </div>
           </div>
