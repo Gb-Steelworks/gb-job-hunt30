@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Briefcase, Building2, Linkedin, BarChart2, Bot, ListChecks, FileText } from 'lucide-react'
 import LeadsPage from './pages/LeadsPage.jsx'
 import CompaniesPage from './pages/CompaniesPage.jsx'
@@ -7,13 +7,14 @@ import ApplicationsPage from './pages/ApplicationsPage.jsx'
 import AgentsPage from './pages/AgentsPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import ResumeVaultPage from './pages/ResumeVaultPage.jsx'
+import { useAppStore } from './store/useAppStore.js'
 
 const DAYS_LEFT = Math.max(0, Math.ceil((new Date('2026-06-03') - new Date()) / (1000 * 60 * 60 * 24)))
 
 const NAV = [
   { id: 'dashboard',    label: 'Dashboard',    icon: BarChart2,  section: 'Overview' },
-  { id: 'leads',        label: 'Job Leads',    icon: Briefcase,  count: 8, section: 'Search' },
-  { id: 'applications', label: 'Applications', icon: ListChecks, count: 0 },
+  { id: 'leads',        label: 'Job Leads',    icon: Briefcase,  section: 'Search' },
+  { id: 'applications', label: 'Applications', icon: ListChecks },
   { id: 'companies',    label: 'Companies',    icon: Building2,  count: 5 },
   { id: 'linkedin',     label: 'LinkedIn',     icon: Linkedin,   section: 'Network' },
   { id: 'agents',       label: 'Agents',       icon: Bot,        section: 'Automation' },
@@ -22,32 +23,74 @@ const NAV = [
 
 export default function App() {
   const [page, setPage] = useState('dashboard')
-  const [pendingApps, setPendingApps] = useState([])
-  const [agentLeads, setAgentLeads] = useState([])
   const [companyFilter, setCompanyFilter] = useState('')
+  const [, forceRender] = useState(0)
+
+  const store = useAppStore()
+
+  // Subscribe to store changes so nav counts update
+  useEffect(() => {
+    const unsub = store.subscribe()
+    return unsub
+  }, [])
 
   const handleApplicationLogged = (appData) => {
-    setPendingApps(prev => prev.find(a => a.id === appData.id) ? prev : [...prev, appData])
+    store.logApplication(appData)
   }
 
   const handleLeadsFound = (newLeads) => {
-    setAgentLeads(prev => {
-      const ids = new Set(prev.map(l => l.id))
-      return [...prev, ...newLeads.filter(l => !ids.has(l.id))]
-    })
+    store.addLeads(newLeads)
     setPage('leads')
+  }
+
+  const handleAdvanceStage = (id) => {
+    store.advanceStage(id)
+    forceRender(n => n + 1)
+  }
+
+  const handleSetStatus = (id, status) => {
+    store.setApplicationStatus(id, status)
+    forceRender(n => n + 1)
   }
 
   const renderPage = () => {
     switch (page) {
-      case 'dashboard':    return <DashboardPage onNavigate={setPage} />
-      case 'leads':        return <LeadsPage onApplicationLogged={handleApplicationLogged} agentLeads={agentLeads} initialCompanyFilter={companyFilter} onClearCompanyFilter={() => setCompanyFilter('')} />
-      case 'applications': return <ApplicationsPage pendingApplications={pendingApps} />
-      case 'companies':    return <CompaniesPage onNavigate={(page, companyFilter) => { if (companyFilter) setCompanyFilter(companyFilter); setPage(page) }} />
-      case 'linkedin':     return <LinkedInPage />
-      case 'agents':       return <AgentsPage onLeadsFound={handleLeadsFound} />
-      case 'vault':        return <ResumeVaultPage />
-      default:             return <DashboardPage onNavigate={setPage} />
+      case 'dashboard':
+        return <DashboardPage onNavigate={setPage} />
+      case 'leads':
+        return (
+          <LeadsPage
+            onApplicationLogged={handleApplicationLogged}
+            agentLeads={store.leads}
+            initialCompanyFilter={companyFilter}
+            onClearCompanyFilter={() => setCompanyFilter('')}
+          />
+        )
+      case 'applications':
+        return (
+          <ApplicationsPage
+            applications={store.applications}
+            onAdvanceStage={handleAdvanceStage}
+            onSetStatus={handleSetStatus}
+          />
+        )
+      case 'companies':
+        return (
+          <CompaniesPage
+            onNavigate={(pg, cf) => {
+              if (cf) setCompanyFilter(cf)
+              setPage(pg)
+            }}
+          />
+        )
+      case 'linkedin':
+        return <LinkedInPage />
+      case 'agents':
+        return <AgentsPage onLeadsFound={handleLeadsFound} />
+      case 'vault':
+        return <ResumeVaultPage />
+      default:
+        return <DashboardPage onNavigate={setPage} />
     }
   }
 
@@ -69,7 +112,13 @@ export default function App() {
           {NAV.map(item => {
             const showSection = item.section && item.section !== lastSection
             if (showSection) lastSection = item.section
-            const count = item.id === 'applications' ? pendingApps.length : item.id === 'leads' ? (8 + agentLeads.length) : item.count
+
+            // Live counts from store
+            const count =
+              item.id === 'applications' ? store.applications.length :
+              item.id === 'leads'        ? store.leads.length || 51 :
+              item.count
+
             return (
               <div key={item.id}>
                 {showSection && <div className="nav-section">{item.section}</div>}
@@ -87,7 +136,7 @@ export default function App() {
         </nav>
         <div style={{ padding: '14px 18px', borderTop: '1px solid var(--border)' }}>
           <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>
-            v1.2 · Built with Claude
+            v1.3 · Built with Claude
           </div>
         </div>
       </aside>
