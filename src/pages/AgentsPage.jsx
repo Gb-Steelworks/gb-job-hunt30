@@ -35,10 +35,10 @@ async function runAgentCall(agentName, sources, finalExtra) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 1000,
       system: 'You are a job search agent. Return ONLY a valid JSON array. No markdown, no preamble. Each object: { "role_title": string, "company": string, "via": string, "category": "QA"|"BA"|"PM", "type": "Contract"|"Full-Time"|"Contract-to-Hire", "work_model": "Remote"|"Hybrid"|"On-site", "pay_rate": string, "days_posted": number, "match_score": number, "contact_name": string, "contact_email": string, "apply_link": string, "status": "New", "notes": string }',
-      messages: [{ role: 'user', content: `${agentName}: Search for roles matching this candidate.\n\n${GEORGE_PROFILE}\n\nSources: ${sources.join(', ')}\n${extra}\n\nReturn 6-8 realistic specific leads. Use real company names, real recruiter names where known, real URLs. Vary across QA/BA/PM. Score 75-98.` }]
+      messages: [{ role: 'user', content: `${agentName}: Search for roles matching this candidate.\n\n${GEORGE_PROFILE}\n\nSources: ${sources.join(', ')}\n${finalExtra}\n\nReturn 6-8 realistic specific leads. Use real company names, real recruiter names where known, real URLs. Vary across QA/BA/PM. Score 75-98.` }]
     })
   })
   const data = await res.json()
