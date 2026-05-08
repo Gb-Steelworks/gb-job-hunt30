@@ -142,7 +142,7 @@ export default function RoleActionPanel({ role, onClose, onApplied }) {
       }
 
       setOut(o => ({ ...o, [type]: result }))
-    } } catch (e) {
+    } catch (e) {
       setOut(o => ({ ...o, [type]: `❌ Error: ${e.message}\n\nTroubleshooting:\n• Check ANTHROPIC_API_KEY is set in Vercel (Production + Preview, no VITE_ prefix)\n• Redeploy after adding/changing env vars\n• Try again — may be a temporary API timeout` }))
     }
     setLoading(l => ({ ...l, [type]: false }))
