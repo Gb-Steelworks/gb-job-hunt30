@@ -29,7 +29,6 @@ const AUTOMATION = [
   { label: 'Option C — n8n (self-hosted)', detail: 'Free, open source, schedulable. Call Claude API every 48h, write results to Supabase + email.', effort: '2hr setup' },
   { label: 'Option D — Email trigger (Agent 3)', detail: 'Send yourself an email: subject "APPLY: [Role] at [Company]" with JD in body. Automation fires Agent 3 and emails back your full prep package.', effort: '30 min setup' },
 ]
-
 async function runAgentCall(agentName, sources, finalExtra) {
   const res = await fetch('/api/claude', {
     method: 'POST',
@@ -46,6 +45,7 @@ async function runAgentCall(agentName, sources, finalExtra) {
   const text = data.content?.map(b => b.text || '').join('') || '[]'
   return JSON.parse(text.replace(/```json|```/g, '').trim())
 }
+
 
 export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
   const [states, setStates] = useState({
