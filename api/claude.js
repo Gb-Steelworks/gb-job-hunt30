@@ -1,5 +1,5 @@
-// v5.2
-// api/claude.js — v4 final
+// v5.3
+// api/claude.js — passes tools through for web search support
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -19,14 +19,21 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid JSON body' })
   }
 
+  // Build headers — add beta header when web search tool is present
+  const hasWebSearch = Array.isArray(body.tools) && body.tools.some(t => t.type === 'web_search_20250305')
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-api-key': apiKey,
+    'anthropic-version': '2023-06-01',
+  }
+  if (hasWebSearch) {
+    headers['anthropic-beta'] = 'web-search-2025-03-05'
+  }
+
   try {
     const upstream = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
+      headers,
       body: JSON.stringify(body),
     })
 
