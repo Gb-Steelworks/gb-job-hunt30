@@ -329,4 +329,76 @@ export default function ResumeVaultPage() {
                       background: 'var(--bg3)',
                       border: '1px solid var(--border)',
                       borderRadius: 'var(--radius)',
-      
+                      color: hasFile ? 'var(--text2)' : 'var(--text3)',
+                      fontSize: 11, cursor: hasFile && !isDl ? 'pointer' : 'not-allowed',
+                      opacity: hasFile ? 1 : 0.4,
+                      fontFamily: 'var(--font)',
+                    }}
+                  >
+                    {isDl
+                      ? <><Loader size={11} style={{ animation: 'spin .8s linear infinite' }} /> Downloading...</>
+                      : <>⬇ Download</>}
+                  </button>
+
+                  {/* Hidden file input */}
+                  <input
+                    ref={el => fileInputRefs.current[v.id] = el}
+                    type="file" accept=".docx" style={{ display: 'none' }}
+                    onChange={e => handleFile(v.id, e.target.files[0])}
+                  />
+
+                  {/* Upload / Replace button */}
+                  <button
+                    onClick={() => fileInputRefs.current[v.id]?.click()}
+                    disabled={isUp}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '7px 12px',
+                      background: hasFile ? 'var(--bg3)' : v.accent,
+                      border: hasFile ? `1px solid ${v.accent}60` : 'none',
+                      borderRadius: 'var(--radius)',
+                      color: hasFile ? v.accent : '#000',
+                      fontSize: 12, fontWeight: 600,
+                      cursor: isUp ? 'not-allowed' : 'pointer',
+                      opacity: isUp ? 0.7 : 1,
+                      fontFamily: 'var(--font)',
+                    }}
+                  >
+                    {isUp
+                      ? <><Loader size={12} style={{ animation: 'spin .8s linear infinite' }} /> Saving...</>
+                      : hasFile
+                      ? <><RefreshCw size={12} /> Replace</>
+                      : <><Upload size={12} /> Upload .docx</>}
+                  </button>
+                </div>
+              </div>
+
+              {/* Drop zone hint */}
+              {!hasFile && !isDrag && (
+                <div style={{ marginTop: 12, padding: 14, border: '1.5px dashed var(--border)', borderRadius: 'var(--radius)', textAlign: 'center', color: 'var(--text3)', fontSize: 11 }}>
+                  Drag &amp; drop your .docx here, or click Upload
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+          padding: '10px 16px', borderRadius: 'var(--radius)', fontSize: 12, fontWeight: 600,
+          maxWidth: 340, lineHeight: 1.5,
+          background: toast.type === 'error' ? 'rgba(248,113,113,0.15)' : toast.type === 'warn' ? 'rgba(245,158,11,0.12)' : 'rgba(62,207,142,0.15)',
+          color:      toast.type === 'error' ? 'var(--danger)'           : toast.type === 'warn' ? 'var(--warn)'            : 'var(--success)',
+          border:     `1px solid ${toast.type === 'error' ? 'rgba(248,113,113,0.3)' : toast.type === 'warn' ? 'rgba(245,158,11,0.25)' : 'rgba(62,207,142,0.3)'}`,
+        }}>
+          {toast.msg}
+        </div>
+      )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
