@@ -1,398 +1,379 @@
-import { useState, useRef } from "react";
+// src/pages/ResumeVaultPage.jsx
+// Resume Vault — drag & drop upload, IndexedDB primary storage, GitHub background sync
+// suggestVariant exported for RoleActionPanel
 
-// ─── suggestVariant — exported for use by RoleActionPanel ─────────────────
-// Maps a lead category to the best-fit resume filename
-export function suggestVariant(category) {
-  const map = {
-    QA:         "George_Brooks_Resume_Testing_QA.docx",
-    BA:         "George_Brooks_Resume_FSI.docx",
-    PM:         "George_Brooks_Resume_PM_Product.docx",
-    consulting: "George_Brooks_Resume_Consulting.docx",
-    govt:       "George_Brooks_Resume_Delivery_Management.docx",
-  };
-  return map[category] || "George_Brooks_Resume_PM_Product.docx";
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { Upload, Download, FileText, CheckCircle, AlertCircle, Loader, RefreshCw } from 'lucide-react'
+
+// ─── suggestVariant — exported for RoleActionPanel ────────────────────────────
+export function suggestVariant(roleText) {
+  const t = roleText.toLowerCase()
+  if (t.includes('qa') || t.includes('test') || t.includes('quality')) return 'qa'
+  if (t.includes('fsi') || t.includes('banking') || t.includes('financial')) return 'fsi'
+  if (t.includes('product') || t.includes('owner') || t.includes('scrum')) return 'pm'
+  if (t.includes('consult') || t.includes('deloitte') || t.includes('capco') || t.includes('kpmg') || t.includes('ey') || t.includes('accenture')) return 'consulting'
+  if (t.includes('delivery') || t.includes('program') || t.includes('pmo')) return 'delivery'
+  if (t.includes('ba') || t.includes('analyst') || t.includes('business')) return 'consulting'
+  return 'consulting'
 }
 
-// ─── Resume variants — edit this list to add/remove vault entries ──────────
-const RESUME_VARIANTS = [
-  {
-    id: "fsi",
-    label: "FSI / Banking",
-    filename: "George_Brooks_Resume_FSI.docx",
-    bestFor: "JPMC, Wells, USAA, Capco FSI roles",
-    category: "FSI",
-  },
-  {
-    id: "consulting",
-    label: "Consulting",
-    filename: "George_Brooks_Resume_Consulting.docx",
-    bestFor: "Deloitte, Accenture, KPMG, EY, Slalom",
-    category: "Consulting",
-  },
-  {
-    id: "pm",
-    label: "PM / Product",
-    filename: "George_Brooks_Resume_PM_Product.docx",
-    bestFor: "Agile PM, Product Owner, Scrum Master",
-    category: "PM",
-  },
-  {
-    id: "qa",
-    label: "Testing / QA",
-    filename: "George_Brooks_Resume_Testing_QA.docx",
-    bestFor: "Manual QA, Test Lead, QA Director",
-    category: "QA",
-  },
-  {
-    id: "delivery",
-    label: "Delivery Management",
-    filename: "George_Brooks_Resume_Delivery_Management.docx",
-    bestFor: "PMO, Program Manager, Delivery Lead",
-    category: "PM",
-  },
-];
+// ─── IndexedDB helpers ────────────────────────────────────────────────────────
+const DB_NAME    = 'ResumeVault'
+const DB_VERSION = 1
+const STORE_NAME = 'resumes'
 
-// ─── Status badge colours ──────────────────────────────────────────────────
-const STATUS_STYLES = {
-  idle:       { bg: "var(--color-background-secondary)", color: "var(--color-text-secondary)" },
-  uploading:  { bg: "#FAEEDA", color: "#BA7517" },
-  success:    { bg: "#EAF3DE", color: "#3B6D11" },
-  error:      { bg: "#FCEBEB", color: "#A32D2D" },
-};
-
-function ResumeCard({ variant, onUploadComplete }) {
-  const inputRef = useRef(null);
-  const [status, setStatus] = useState("idle");   // idle | uploading | success | error
-  const [message, setMessage] = useState("");
-  const [removing, setRemoving] = useState(false);
-
-  async function handleFileChange(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!file.name.endsWith(".docx")) {
-      setStatus("error");
-      setMessage("Only .docx files allowed");
-      return;
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION)
+    req.onupgradeneeded = (e) => {
+      e.target.result.createObjectStore(STORE_NAME, { keyPath: 'id' })
     }
-
-    setStatus("uploading");
-    setMessage("Uploading…");
-
-    // Read as base64
-    const base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result.split(",")[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-    try {
-      const res = await fetch("/api/upload-resume", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: variant.filename, content: base64 }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
-      setStatus("success");
-      setMessage(data.action === "replaced" ? "Replaced ✓" : "Uploaded ✓");
-      onUploadComplete?.();
-      setTimeout(() => { setStatus("idle"); setMessage(""); }, 3000);
-    } catch (err) {
-      setStatus("error");
-      setMessage(err.message);
-    }
-
-    // Reset input so same file can be re-selected
-    e.target.value = "";
-  }
-
-  const badgeStyle = STATUS_STYLES[status];
-
-  return (
-    <div style={{
-      background: "var(--color-background-primary)",
-      border: "0.5px solid var(--color-border-tertiary)",
-      borderRadius: "var(--border-radius-lg)",
-      padding: "1rem 1.25rem",
-      display: "flex",
-      flexDirection: "column",
-      gap: 10,
-    }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-        <div>
-          <div style={{ fontWeight: 500, fontSize: 15, color: "var(--color-text-primary)" }}>
-            {variant.label}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2 }}>
-            {variant.bestFor}
-          </div>
-          <div style={{
-            display: "inline-block", marginTop: 6,
-            fontSize: 11, padding: "3px 8px",
-            borderRadius: 4,
-            background: "var(--color-background-secondary)",
-            color: "var(--color-text-secondary)",
-          }}>
-            {variant.filename}
-          </div>
-        </div>
-        {/* Status badge */}
-        {message && (
-          <div style={{
-            fontSize: 12, padding: "4px 10px", borderRadius: 4,
-            background: badgeStyle.bg, color: badgeStyle.color,
-            whiteSpace: "nowrap",
-          }}>
-            {status === "uploading" && (
-              <span style={{ marginRight: 6, display: "inline-block", animation: "spin 1s linear infinite" }}>⟳</span>
-            )}
-            {message}
-          </div>
-        )}
-      </div>
-
-      {/* Action buttons */}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <a
-          href={`/resumes/${variant.filename}`}
-          download
-          style={{
-            fontSize: 13, padding: "6px 14px",
-            border: "0.5px solid var(--color-border-secondary)",
-            borderRadius: "var(--border-radius-md)",
-            background: "var(--color-background-primary)",
-            color: "var(--color-text-primary)",
-            textDecoration: "none",
-            cursor: "pointer",
-          }}
-        >
-          Download
-        </a>
-
-        <button
-          onClick={() => inputRef.current?.click()}
-          disabled={status === "uploading"}
-          style={{
-            fontSize: 13, padding: "6px 14px",
-            border: "0.5px solid var(--color-border-secondary)",
-            borderRadius: "var(--border-radius-md)",
-            background: "var(--color-background-primary)",
-            color: "var(--color-text-primary)",
-            cursor: status === "uploading" ? "not-allowed" : "pointer",
-            opacity: status === "uploading" ? 0.6 : 1,
-          }}
-        >
-          {variant.filename.includes("?") ? "Add file" : "Replace"}
-        </button>
-
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".docx"
-          style={{ display: "none" }}
-          onChange={handleFileChange}
-        />
-      </div>
-    </div>
-  );
+    req.onsuccess = (e) => resolve(e.target.result)
+    req.onerror   = (e) => reject(e.target.error)
+  })
 }
 
-
-// ─── Add New Resume Modal ──────────────────────────────────────────────────
-function AddResumeModal({ onClose, onAdded }) {
-  const inputRef = useRef(null);
-  const [label, setLabel] = useState("");
-  const [filename, setFilename] = useState("");
-  const [bestFor, setBestFor] = useState("");
-  const [status, setStatus] = useState("idle");
-  const [message, setMessage] = useState("");
-
-  function slugify(str) {
-    return str.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/(^_|_$)/g, "");
-  }
-
-  function handleLabelChange(e) {
-    const val = e.target.value;
-    setLabel(val);
-    if (!filename || filename === slugify(label) + ".docx") {
-      setFilename(slugify(val) + ".docx");
-    }
-  }
-
-  async function handleSubmit() {
-    const file = inputRef.current?.files[0];
-    if (!label.trim()) { setMessage("Label required"); setStatus("error"); return; }
-    if (!file) { setMessage("Select a .docx file"); setStatus("error"); return; }
-    if (!file.name.endsWith(".docx")) { setMessage("Only .docx files"); setStatus("error"); return; }
-
-    setStatus("uploading");
-    setMessage("Uploading…");
-
-    const base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result.split(",")[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-    const targetFilename = filename || slugify(label) + ".docx";
-
-    try {
-      const res = await fetch("/api/upload-resume", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: targetFilename, content: base64 }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
-      setStatus("success");
-      setMessage("Added ✓  — Vercel deploys in ~60s");
-      onAdded?.({ label, filename: targetFilename, bestFor });
-      setTimeout(onClose, 2500);
-    } catch (err) {
-      setStatus("error");
-      setMessage(err.message);
-    }
-  }
-
-  const inputStyle = {
-    width: "100%", fontSize: 14, padding: "8px 10px",
-    border: "0.5px solid var(--color-border-secondary)",
-    borderRadius: "var(--border-radius-md)",
-    background: "var(--color-background-primary)",
-    color: "var(--color-text-primary)",
-    marginBottom: 10,
-  };
-
-  return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
-      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
-    }}>
-      <div style={{
-        background: "var(--color-background-primary)",
-        border: "0.5px solid var(--color-border-tertiary)",
-        borderRadius: "var(--border-radius-lg)",
-        padding: "1.5rem", width: 420, maxWidth: "90vw",
-      }}>
-        <div style={{ fontWeight: 500, fontSize: 17, marginBottom: 16 }}>Add new resume variant</div>
-
-        <label style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>Label *</label>
-        <input style={inputStyle} value={label} onChange={handleLabelChange} placeholder="e.g. Agile PM — Artemis" />
-
-        <label style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>Best for</label>
-        <input style={inputStyle} value={bestFor} onChange={e => setBestFor(e.target.value)} placeholder="e.g. Consulting PM roles, public sector" />
-
-        <label style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>Filename (auto-generated)</label>
-        <input style={{ ...inputStyle, color: "var(--color-text-secondary)" }} value={filename} onChange={e => setFilename(e.target.value)} />
-
-        <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "block", marginBottom: 8 }}>
-          .docx file *
-        </label>
-        <input ref={inputRef} type="file" accept=".docx" style={{ marginBottom: 16, fontSize: 13 }} />
-
-        {message && (
-          <div style={{
-            fontSize: 13, padding: "8px 12px", borderRadius: 6, marginBottom: 12,
-            background: STATUS_STYLES[status].bg, color: STATUS_STYLES[status].color,
-          }}>{message}</div>
-        )}
-
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button onClick={onClose} style={{
-            fontSize: 13, padding: "7px 16px",
-            border: "0.5px solid var(--color-border-secondary)",
-            borderRadius: "var(--border-radius-md)",
-            background: "var(--color-background-secondary)",
-            color: "var(--color-text-primary)", cursor: "pointer",
-          }}>Cancel</button>
-          <button onClick={handleSubmit} disabled={status === "uploading"} style={{
-            fontSize: 13, padding: "7px 16px",
-            border: "0.5px solid var(--color-border-secondary)",
-            borderRadius: "var(--border-radius-md)",
-            background: "var(--color-background-primary)",
-            color: "var(--color-text-primary)", cursor: "pointer",
-          }}>Upload</button>
-        </div>
-      </div>
-    </div>
-  );
+async function dbSave(id, data) {
+  const db   = await openDB()
+  const tx   = db.transaction(STORE_NAME, 'readwrite')
+  const store = tx.objectStore(STORE_NAME)
+  store.put({ id, ...data, saved_at: new Date().toISOString() })
+  return new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej })
 }
 
+async function dbGet(id) {
+  const db   = await openDB()
+  const tx   = db.transaction(STORE_NAME, 'readonly')
+  const store = tx.objectStore(STORE_NAME)
+  return new Promise((res, rej) => {
+    const req = store.get(id)
+    req.onsuccess = () => res(req.result || null)
+    req.onerror   = () => rej(req.error)
+  })
+}
 
-// ─── Main Page ─────────────────────────────────────────────────────────────
+async function dbGetAll() {
+  const db   = await openDB()
+  const tx   = db.transaction(STORE_NAME, 'readonly')
+  const store = tx.objectStore(STORE_NAME)
+  return new Promise((res, rej) => {
+    const req = store.getAll()
+    req.onsuccess = () => res(req.result || [])
+    req.onerror   = () => rej(req.error)
+  })
+}
+
+// ─── Variants config ──────────────────────────────────────────────────────────
+const VARIANTS = [
+  { id: 'consulting', label: 'Consulting',          file: 'George_Brooks_Resume_Consulting.docx',          accent: 'var(--success)',  bestFor: 'Deloitte, Accenture, KPMG, EY, Slalom, Capco' },
+  { id: 'fsi',        label: 'FSI / Banking',        file: 'George_Brooks_Resume_FSI.docx',                 accent: 'var(--accent2)',  bestFor: 'JPMC, Wells Fargo, USAA, Schwab, Fidelity, Frost Bank' },
+  { id: 'pm',         label: 'PM / Product',         file: 'George_Brooks_Resume_PM_Product.docx',          accent: 'var(--accent)',   bestFor: 'Agile PM, Product Owner, Scrum Master roles' },
+  { id: 'qa',         label: 'Testing / QA',         file: 'George_Brooks_Resume_Testing_QA.docx',          accent: 'var(--warn)',     bestFor: 'Manual QA, Test Lead, QA Director roles' },
+  { id: 'delivery',   label: 'Delivery Management',  file: 'George_Brooks_Resume_Delivery_Management.docx', accent: '#fb923c',         bestFor: 'PMO, Program Manager, Delivery Lead, RTE' },
+]
+
 export default function ResumeVaultPage() {
-  const [variants, setVariants] = useState(RESUME_VARIANTS);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [vaultState, setVaultState]   = useState({}) // id → { status, saved_at, size, inGitHub }
+  const [uploading, setUploading]     = useState({}) // id → bool
+  const [dragOver, setDragOver]       = useState(null)
+  const [toast, setToast]             = useState(null)
+  const fileInputRefs                 = useRef({})
 
-  function handleAdded(newVariant) {
-    setVariants(prev => [
-      ...prev,
-      {
-        id: newVariant.filename.replace(".docx", ""),
-        label: newVariant.label,
-        filename: newVariant.filename,
-        bestFor: newVariant.bestFor || "—",
-        category: "PM",
+  // Load IndexedDB state on mount
+  useEffect(() => {
+    dbGetAll().then(records => {
+      const state = {}
+      records.forEach(r => { state[r.id] = { status: 'local', saved_at: r.saved_at, size: r.size } })
+      setVaultState(state)
+    }).catch(() => {})
+  }, [])
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3500)
+  }
+
+  // ── Upload handler ────────────────────────────────────────────────────────
+  const handleFile = useCallback(async (variantId, file) => {
+    if (!file) return
+    if (!file.name.endsWith('.docx')) {
+      showToast('Only .docx files are supported', 'error')
+      return
+    }
+
+    setUploading(u => ({ ...u, [variantId]: true }))
+
+    try {
+      // Read file as ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer()
+      const base64      = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+
+      // 1. Save to IndexedDB immediately
+      await dbSave(variantId, {
+        filename: VARIANTS.find(v => v.id === variantId)?.file || file.name,
+        base64,
+        size: file.size,
+        original_name: file.name,
+      })
+
+      setVaultState(s => ({
+        ...s,
+        [variantId]: { status: 'local', saved_at: new Date().toISOString(), size: file.size }
+      }))
+      showToast(`✓ ${VARIANTS.find(v => v.id === variantId)?.label} saved to browser storage`)
+
+      // 2. Push to GitHub in background
+      const variant = VARIANTS.find(v => v.id === variantId)
+      pushToGitHub(variant.file, base64)
+        .then(() => {
+          setVaultState(s => ({ ...s, [variantId]: { ...s[variantId], inGitHub: true } }))
+          showToast(`☁️ ${variant.label} synced to GitHub`)
+        })
+        .catch(err => {
+          // GitHub sync failed — local save still succeeded
+          console.warn('GitHub sync failed:', err.message)
+        })
+
+    } catch (err) {
+      showToast(`Upload failed: ${err.message}`, 'error')
+    }
+
+    setUploading(u => ({ ...u, [variantId]: false }))
+  }, [])
+
+  // ── GitHub push ───────────────────────────────────────────────────────────
+  const pushToGitHub = async (filename, base64) => {
+    const res = await fetch('/api/upload-resume', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename, content: base64 }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || `HTTP ${res.status}`)
+    }
+    return res.json()
+  }
+
+  // ── Download — IndexedDB first, GitHub fallback ───────────────────────────
+  const [downloading, setDownloading] = useState({})
+
+  const downloadLocal = async (variantId) => {
+    setDownloading(d => ({ ...d, [variantId]: true }))
+    const vInfo = VARIANTS.find(v => v.id === variantId)
+    try {
+      const record = await dbGet(variantId)
+      let base64, filename
+
+      if (record?.base64) {
+        // ✅ Found in IndexedDB — use local copy instantly
+        base64   = record.base64
+        filename = record.filename || vInfo.file
+        showToast(`Downloading ${filename}...`)
+      } else {
+        // ⬇️ Not in browser — fetch from GitHub via proxy
+        showToast(`Fetching from GitHub...`)
+        const res = await fetch(`/api/get-resume?filename=${encodeURIComponent(vInfo.file)}`)
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.error || `Not found — upload the file in Resume Vault first`)
+        }
+        const data = await res.json()
+        base64   = data.base64
+        filename = vInfo.file
+        // Cache it in IndexedDB for next time
+        await dbSave(variantId, { filename, base64, size: Math.round(base64.length * 0.75) }).catch(() => {})
+        setVaultState(s => ({ ...s, [variantId]: { ...s[variantId], status: 'local', inGitHub: true } }))
       }
-    ]);
+
+      // Decode base64 → blob → download
+      const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+      const blob  = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+      const url   = URL.createObjectURL(blob)
+      const a     = document.createElement('a')
+      a.href      = url
+      a.download  = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      showToast(`✓ ${filename} downloaded`)
+    } catch (err) {
+      showToast(`Download failed: ${err.message}`, 'error')
+    }
+    setDownloading(d => ({ ...d, [variantId]: false }))
+  }
+
+  // ── Drag & drop ───────────────────────────────────────────────────────────
+  const onDrop = (e, variantId) => {
+    e.preventDefault()
+    setDragOver(null)
+    const file = e.dataTransfer.files[0]
+    if (file) handleFile(variantId, file)
+  }
+
+  const onDragOver = (e, variantId) => {
+    e.preventDefault()
+    setDragOver(variantId)
+  }
+
+  const formatSize = (bytes) => {
+    if (!bytes) return ''
+    return bytes > 1024 * 1024
+      ? `${(bytes / 1024 / 1024).toFixed(1)} MB`
+      : `${Math.round(bytes / 1024)} KB`
+  }
+
+  const formatDate = (iso) => {
+    if (!iso) return ''
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
   }
 
   return (
-    <div style={{ padding: "1.5rem 1rem" }}>
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem", flexWrap: "wrap", gap: 10 }}>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 500, color: "var(--color-text-primary)" }}>Resume Vault</div>
-          <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 4 }}>
-            {variants.length} variants · Click <strong>Replace</strong> to swap a file · Vercel redeploys in ~60s
-          </div>
+    <div className="page">
+      <div className="page-header">
+        <div className="page-title">Resume Vault</div>
+        <div className="page-sub">
+          Drag &amp; drop your .docx files onto each variant — saved locally + synced to GitHub
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          style={{
-            fontSize: 14, padding: "8px 18px",
-            border: "0.5px solid var(--color-border-secondary)",
-            borderRadius: "var(--border-radius-md)",
-            background: "var(--color-background-primary)",
-            color: "var(--color-text-primary)",
-            cursor: "pointer",
-          }}
-        >
-          + Add resume
-        </button>
       </div>
 
-      {/* Note about GitHub deployment */}
-      <div style={{
-        fontSize: 13, padding: "10px 14px", marginBottom: "1.5rem",
-        background: "var(--color-background-secondary)",
-        border: "0.5px solid var(--color-border-tertiary)",
-        borderRadius: "var(--border-radius-md)",
-        color: "var(--color-text-secondary)",
-      }}>
-        Files are committed directly to GitHub (<code>public/resumes/</code>) and served as static assets via Vercel.
-        After upload, the file is live in ~60 seconds. <strong>Supabase Storage migration coming soon</strong> — no changes needed on your end when that switches.
+      {/* Info banner */}
+      <div style={{ padding: '10px 14px', marginBottom: 20, background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 'var(--radius)', fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--font-mono)', lineHeight: 1.7 }}>
+        Files save instantly to your browser (IndexedDB). GitHub sync happens in the background — works even without a GitHub token.
+        The ATS Optimizer pulls from browser storage first, then falls back to GitHub.
       </div>
 
-      {/* Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
-        {variants.map(v => (
-          <ResumeCard key={v.id} variant={v} />
-        ))}
+      <div style={{ display: 'grid', gap: 12 }}>
+        {VARIANTS.map(v => {
+          const state    = vaultState[v.id]
+          const isUpload = uploading[v.id]
+          const isDrag   = dragOver === v.id
+          const hasFile  = !!state
+
+          return (
+            <div
+              key={v.id}
+              className="card"
+              onDrop={e => onDrop(e, v.id)}
+              onDragOver={e => onDragOver(e, v.id)}
+              onDragLeave={() => setDragOver(null)}
+              style={{
+                border: isDrag
+                  ? `2px dashed ${v.accent}`
+                  : hasFile
+                  ? `1px solid ${v.accent}40`
+                  : '1px solid var(--border)',
+                background: isDrag ? `${v.accent}08` : 'var(--bg2)',
+                transition: 'border-color .15s, background .15s',
+                position: 'relative',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                {/* Left: info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: v.accent, flexShrink: 0 }} />
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{v.label}</div>
+                    {hasFile && (
+                      <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', padding: '2px 6px', borderRadius: 10, background: `${v.accent}15`, color: v.accent, border: `1px solid ${v.accent}30` }}>
+                        {state.inGitHub ? '☁️ synced' : '💾 local'}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', marginBottom: 6 }}>
+                    {v.file}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: hasFile ? 8 : 0 }}>
+                    Best for: {v.bestFor}
+                  </div>
+
+                  {hasFile && (
+                    <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', display: 'flex', gap: 12 }}>
+                      {state.size && <span>{formatSize(state.size)}</span>}
+                      {state.saved_at && <span>Uploaded {formatDate(state.saved_at)}</span>}
+                    </div>
+                  )}
+
+                  {isDrag && (
+                    <div style={{ fontSize: 12, color: v.accent, fontWeight: 600, marginTop: 6 }}>
+                      Drop to upload →
+                    </div>
+                  )}
+                </div>
+
+                {/* Right: actions */}
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
+                  <button
+                    onClick={() => downloadLocal(v.id)}
+                    disabled={downloading[v.id]}
+                    title={hasFile ? 'Download from browser storage' : 'Download from GitHub'}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: downloading[v.id] ? 'var(--accent2)' : 'var(--text2)', fontSize: 11, cursor: downloading[v.id] ? 'not-allowed' : 'pointer', fontFamily: 'var(--font)', opacity: downloading[v.id] ? 0.7 : 1 }}
+                  >
+                    {downloading[v.id]
+                      ? <><Loader size={11} style={{ animation: 'spin .8s linear infinite' }} /> Downloading...</>
+                      : <><Download size={12} /> Download</>}
+                  </button>
+
+                  {/* Hidden file input */}
+                  <input
+                    ref={el => fileInputRefs.current[v.id] = el}
+                    type="file"
+                    accept=".docx"
+                    style={{ display: 'none' }}
+                    onChange={e => handleFile(v.id, e.target.files[0])}
+                  />
+
+                  <button
+                    onClick={() => fileInputRefs.current[v.id]?.click()}
+                    disabled={isUpload}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '7px 12px',
+                      background: hasFile ? 'var(--bg3)' : v.accent,
+                      border: hasFile ? `1px solid ${v.accent}50` : 'none',
+                      borderRadius: 'var(--radius)',
+                      color: hasFile ? v.accent : '#000',
+                      fontSize: 12, fontWeight: 600, cursor: isUpload ? 'not-allowed' : 'pointer',
+                      opacity: isUpload ? 0.7 : 1,
+                      fontFamily: 'var(--font)',
+                    }}
+                  >
+                    {isUpload
+                      ? <><Loader size={12} style={{ animation: 'spin .8s linear infinite' }} /> Saving...</>
+                      : hasFile
+                      ? <><RefreshCw size={12} /> Replace</>
+                      : <><Upload size={12} /> Upload .docx</>}
+                  </button>
+                </div>
+              </div>
+
+              {/* Drop zone hint when empty */}
+              {!hasFile && !isDrag && (
+                <div style={{ marginTop: 12, padding: '16px', border: '1.5px dashed var(--border)', borderRadius: 'var(--radius)', textAlign: 'center', color: 'var(--text3)', fontSize: 11 }}>
+                  Drag &amp; drop your .docx here, or click Upload
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
 
-      {/* Add Modal */}
-      {showAddModal && (
-        <AddResumeModal
-          onClose={() => setShowAddModal(false)}
-          onAdded={handleAdded}
-        />
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 20, right: 20, zIndex: 9999,
+          padding: '10px 16px', borderRadius: 'var(--radius)', fontSize: 12, fontWeight: 600,
+          background: toast.type === 'error' ? 'rgba(248,113,113,0.15)' : 'rgba(62,207,142,0.15)',
+          color: toast.type === 'error' ? 'var(--danger)' : 'var(--success)',
+          border: `1px solid ${toast.type === 'error' ? 'rgba(248,113,113,0.3)' : 'rgba(62,207,142,0.3)'}`,
+          maxWidth: 320,
+        }}>
+          {toast.msg}
+        </div>
       )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
-  );
+  )
 }
