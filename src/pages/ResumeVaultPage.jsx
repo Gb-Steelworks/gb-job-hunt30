@@ -1,7 +1,7 @@
 // src/pages/ResumeVaultPage.jsx — v3 final
 // Drag & drop upload → IndexedDB (instant) + GitHub sync (background)
 // Shows live sync status: 💾 local | ☁️ synced | ⚠️ missing
-// suggestVariant exported for RoleActionPanel
+// suggestVariant exported for RoleActionPanel 
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Upload, Download, RefreshCw, Loader, CheckCircle } from 'lucide-react'
