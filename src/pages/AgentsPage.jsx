@@ -21,21 +21,21 @@ Key employers: JPMC, Capco, Deloitte, Makpar/IRS, Supply Bistro
 Certs: CSM, SAFe POPM, PMP (exp Jun 2026), Azure, Gen AI
 Tools: JIRA, Confluence, Power BI, Selenium, Smartsheet, Azure`
 
-// Trimmed to 5 queries each to stay under rate limits
+// Plain natural language queries — web_search tool does not support site: syntax
 const SEARCHES_AGENT1 = [
-  'site:kforce.com business analyst Houston TX contract 2026',
-  'site:teksystems.com business analyst OR scrum master Houston OR remote 2026',
-  'site:thejudgegroup.com business analyst OR agile project manager Texas 2026',
-  'site:linkedin.com/jobs senior business analyst Houston TX remote contract 2026',
-  'site:indeed.com agile scrum master OR business analyst Houston TX contract 2026',
+  'Kforce contract business analyst Houston Texas remote 2026 job posting',
+  'TekSystems contract senior business analyst agile Houston Texas 2026 apply',
+  'Judge Group contract scrum master agile project manager Houston Texas 2026',
+  'Insight Global contract business analyst product owner Houston Texas remote 2026',
+  'contract senior business analyst SAFe agile Houston Texas remote job opening 2026',
 ]
 
 const SEARCHES_AGENT2 = [
-  'site:capco.com/careers agile delivery manager OR senior business analyst 2026',
-  'site:deloitte.com/careers consultant agile SAFe business analyst Texas 2026',
-  'site:slalom.com/careers consultant agile business analyst Houston Texas 2026',
-  'site:governmentjobs.com/careers/harriscountytx business analyst OR project manager 2026',
-  'site:careers.kpmg.com business analyst technology consulting Houston 2026',
+  'Capco consulting agile delivery manager senior business analyst Houston Texas jobs 2026',
+  'Deloitte consultant SAFe agile business analyst Texas jobs 2026 apply',
+  'Slalom consulting business analyst agile Houston Texas jobs 2026',
+  'Harris County Texas business analyst project manager job opening 2026',
+  'KPMG EY Accenture business analyst agile project manager Houston Texas 2026',
 ]
 
 const AUTOMATION = [
@@ -81,10 +81,10 @@ Each object must have exactly these fields:
   "contact_email": string,
   "apply_link": string,
   "notes": string,
-  "verified": true
+
 }
 
-match_score: 75-98 based on fit with George's background. Only include verified live postings.`,
+match_score: 75-98 based on fit with Georges background. Include any real posting you find.`,
       messages: [{
         role: 'user',
         content: `${agentName}: Find real live job postings for this candidate.
@@ -166,7 +166,7 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
       if (!Array.isArray(leads)) throw new Error('Invalid response — expected JSON array')
 
       const verified = leads.filter(l =>
-        l.verified === true &&
+
         l.apply_link?.startsWith('http') &&
         (l.days_posted === null || l.days_posted <= 120)
       )
