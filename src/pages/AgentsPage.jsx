@@ -3,7 +3,7 @@
 // Every lead returned is a verified, live posting from the actual web
 
 import { useState } from 'react'
-import { Bot, Clock, Zap, Mail, Loader, AlertCircle, ExternalLink } from 'lucide-react'
+import { Bot, Clock, Zap, Loader, AlertCircle } from 'lucide-react'
 
 const GEORGE_PROFILE = `Candidate: George Brooks, Houston TX
 Target roles (priority order):
@@ -21,34 +21,21 @@ Key employers: JPMC, Capco, Deloitte, Makpar/IRS, Supply Bistro
 Certs: CSM, SAFe POPM, PMP (exp Jun 2026), Azure, Gen AI
 Tools: JIRA, Confluence, Power BI, Selenium, Smartsheet, Azure`
 
-// Agent 1 — staffing firms + job boards
+// Trimmed to 5 queries each to stay under rate limits
 const SEARCHES_AGENT1 = [
-  'site:teksystems.com/jobs business analyst Houston TX',
-  'site:teksystems.com/jobs QA analyst Houston OR Dallas OR remote',
-  'site:kforce.com/jobs business analyst Houston TX',
-  'site:kforce.com/jobs agile project manager Texas remote',
-  'site:thejudgegroup.com/careers business analyst Texas',
-  'site:insightglobal.com/jobs QA lead Houston OR remote',
-  'site:cybercoders.com business analyst agile Houston TX',
-  'site:linkedin.com/jobs business analyst Houston TX remote 2026',
-  'site:linkedin.com/jobs QA lead scrum master Houston Texas remote',
-  'site:indeed.com business analyst agile scrum Houston TX contract',
+  'site:kforce.com business analyst Houston TX contract 2026',
+  'site:teksystems.com business analyst OR scrum master Houston OR remote 2026',
+  'site:thejudgegroup.com business analyst OR agile project manager Texas 2026',
+  'site:linkedin.com/jobs senior business analyst Houston TX remote contract 2026',
+  'site:indeed.com agile scrum master OR business analyst Houston TX contract 2026',
 ]
 
-// Agent 2 — FSI + boutique consulting + govt
 const SEARCHES_AGENT2 = [
-  'site:careers.jpmorganchase.com business analyst OR project manager Houston',
-  'site:jobs.smartrecruiters.com/WellsFargo business analyst OR agile',
-  'site:usaa.com/careers business analyst OR agile delivery',
-  'site:schwab.com/careers business analyst OR project manager',
-  'site:slalom.com/careers consultant agile business analyst Texas',
-  'site:westmonroe.com/careers consultant business analyst Texas',
-  'site:pariveda.com/careers consultant business analyst Texas',
-  'site:capco.com/careers agile delivery manager OR business analyst',
-  'site:deloitte.com/careers consultant agile SAFe business analyst',
-  'site:governmentjobs.com/careers/houston business analyst OR project manager',
-  'site:governmentjobs.com/careers/harriscountytx business analyst',
-  'site:careers.kpmg.com business analyst technology Houston',
+  'site:capco.com/careers agile delivery manager OR senior business analyst 2026',
+  'site:deloitte.com/careers consultant agile SAFe business analyst Texas 2026',
+  'site:slalom.com/careers consultant agile business analyst Houston Texas 2026',
+  'site:governmentjobs.com/careers/harriscountytx business analyst OR project manager 2026',
+  'site:careers.kpmg.com business analyst technology consulting Houston 2026',
 ]
 
 const AUTOMATION = [
@@ -57,38 +44,38 @@ const AUTOMATION = [
   { label: 'Option C — Vercel cron', detail: 'Add /api/run-agents.js + Supabase to persist leads automatically.', effort: '1-2 sessions' },
 ]
 
-// ─── Real web search via Anthropic API ───────────────────────────────────────
 async function searchForLeads(agentName, searches, profileContext) {
   const res = await fetch('/api/claude', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
+      model: 'claude-sonnet-4-6',
+      max_tokens: 3000,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-      system: `You are a job search agent for George Brooks. 
-Your job is to find REAL, LIVE, VERIFIABLE job postings that match his profile.
+      system: `You are a job search agent for George Brooks.
+Find REAL, LIVE, VERIFIABLE job postings that match his profile.
 
 CRITICAL RULES — no exceptions:
 1. Only return roles you actually found via web search with a real URL you verified
 2. Never invent, guess, or fabricate any role, company, contact, or URL
-3. If a search returns no results or the posting is expired/filled, skip it — do not fill in fake data
-4. Every apply_link must be a real URL you retrieved from search results
+3. If a search returns no results or the posting is expired/filled, skip it
+4. Every apply_link must be a real URL from search results
 5. If you cannot find a real recruiter name, set contact_name to "" and contact_email to ""
-6. days_posted must be based on actual posting date from search results — if unknown, set to null
-7. If a role has been posted more than 120 days ago, skip it
+6. days_posted must be from actual posting date — if unknown set to null
+7. Skip roles posted more than 120 days ago
 
-After searching, return ONLY a valid JSON array. No markdown, no explanation, no preamble.
-Each object: { 
-  "role_title": string, 
-  "company": string, 
-  "via": string, 
-  "category": "QA"|"BA"|"PM"|"Consulting",
-  "type": "Contract"|"Full-Time"|"Contract-to-Hire"|"Unknown",
-  "work_model": "Remote"|"Hybrid"|"On-site"|"Unknown",
+Return ONLY a valid JSON array. No markdown, no explanation, no preamble.
+Each object must have exactly these fields:
+{
+  "role_title": string,
+  "company": string,
+  "via": string,
+  "category": "QA" | "BA" | "PM" | "Consulting",
+  "type": "Contract" | "Full-Time" | "Contract-to-Hire" | "Unknown",
+  "work_model": "Remote" | "Hybrid" | "On-site" | "Unknown",
   "location": string,
   "pay_rate": string,
-  "days_posted": number|null,
+  "days_posted": number | null,
   "match_score": number,
   "contact_name": string,
   "contact_email": string,
@@ -97,45 +84,54 @@ Each object: {
   "verified": true
 }
 
-match_score: score 75-98 based on fit with George's background. Only verified live postings get a score.`,
+match_score: 75-98 based on fit with George's background. Only include verified live postings.`,
       messages: [{
         role: 'user',
-        content: `${agentName}: Find real, live job postings for this candidate.
+        content: `${agentName}: Find real live job postings for this candidate.
 
 ${profileContext}
 
-Search each of these queries and return only postings you actually find:
+Search each query below and return only postings you actually find and verify:
 ${searches.map((s, i) => `${i + 1}. ${s}`).join('\n')}
 
-For each real posting you find:
-- Confirm the URL is live and the role is still open
-- Extract the exact job title, company, location, job type, pay rate if listed
-- Find the recruiter or hiring manager name/email if shown on the page
-- Record how many days ago it was posted
-- Score it against George's background
+For each real posting:
+- Confirm the URL is live and role is still open
+- Extract exact title, company, location, type, pay rate if listed
+- Find recruiter or hiring manager name/email if shown
+- Record days since posted
+- Score against George's background
 
-Return ONLY the JSON array of verified real postings. If you find zero real postings, return [].`
+Return ONLY the JSON array. If zero real postings found, return [].`
       }]
     })
   })
 
   const data = await res.json()
-  if (data.error) throw new Error(typeof data.error === 'string' ? data.error : data.error.message || 'API error')
 
-  // Extract text from all content blocks (web search returns mixed tool_use + text blocks)
-  const text = data.content
-    ?.filter(b => b.type === 'text')
-    ?.map(b => b.text || '')
-    ?.join('') || '[]'
+  if (data.error) {
+    const msg = typeof data.error === 'string' ? data.error : data.error?.message || JSON.stringify(data.error)
+    throw new Error(msg)
+  }
+
+  // Extract text blocks — web search returns mixed tool_use + text blocks
+  const text = (data.content || [])
+    .filter(b => b.type === 'text')
+    .map(b => b.text || '')
+    .join('')
+    .trim()
+
+  if (!text) return []
 
   const cleaned = text.replace(/```json|```/g, '').trim()
-
-  // Find JSON array in response
   const start = cleaned.indexOf('[')
   const end = cleaned.lastIndexOf(']')
   if (start === -1 || end === -1) return []
 
-  return JSON.parse(cleaned.slice(start, end + 1))
+  try {
+    return JSON.parse(cleaned.slice(start, end + 1))
+  } catch {
+    return []
+  }
 }
 
 export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
@@ -144,42 +140,34 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
     2: { status: 'idle', lastRun: 'May 7, 2026 · Manual run', leadsFound: null, log: [] },
   })
 
-  const addLog = (id, msg) => setStates(prev => ({
+  const log = (id, msg) => setStates(prev => ({
     ...prev,
-    [id]: { ...prev[id], log: [...(prev[id].log || []), `${new Date().toLocaleTimeString()} — ${msg}` ] }
+    [id]: {
+      ...prev[id],
+      log: [...(prev[id].log || []), `${new Date().toLocaleTimeString()} — ${msg}`]
+    }
   }))
 
   const runAgent = async (id) => {
     setStates(prev => ({ ...prev, [id]: { ...prev[id], status: 'running', log: [] } }))
 
-    const log = (msg) => {
-      setStates(prev => ({
-        ...prev,
-        [id]: { ...prev[id], log: [...(prev[id].log || []), `${new Date().toLocaleTimeString()} — ${msg}`] }
-      }))
-    }
-
-    log('Starting real web search...')
-    log(`Searching ${(id === 1 ? SEARCHES_AGENT1 : SEARCHES_AGENT2).length} queries across live job sites...`)
-
     const searches = id === 1 ? SEARCHES_AGENT1 : SEARCHES_AGENT2
     const agentName = id === 1 ? 'Agent 1 — Job Scout' : 'Agent 2 — FSI & Boutique Spotter'
-
     const extraContext = extraPatterns.length > 0
       ? `\n\nAlso search for roles similar to: ${extraPatterns.map(p => `${p.role_title} at ${p.company}`).join(', ')}`
       : ''
 
+    log(id, `Starting ${agentName}...`)
+    log(id, `Running ${searches.length} web searches — this takes 30–60 seconds...`)
+
     try {
-      log('Running web searches — this may take 30-60 seconds...')
       const leads = await searchForLeads(agentName, searches, GEORGE_PROFILE + extraContext)
 
-      if (!Array.isArray(leads)) throw new Error('Invalid response format from search')
+      if (!Array.isArray(leads)) throw new Error('Invalid response — expected JSON array')
 
-      // Filter: only verified, only fresh postings
       const verified = leads.filter(l =>
         l.verified === true &&
-        l.apply_link &&
-        l.apply_link.startsWith('http') &&
+        l.apply_link?.startsWith('http') &&
         (l.days_posted === null || l.days_posted <= 120)
       )
 
@@ -199,7 +187,7 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
           leadsFound: stamped.length,
           log: [
             ...(prev[id].log || []),
-            `${new Date().toLocaleTimeString()} — ✅ Found ${leads.length} postings · ${stamped.length} verified & fresh · ${leads.length - stamped.length} skipped (expired/unverified)`
+            `${new Date().toLocaleTimeString()} — ✅ ${leads.length} postings found · ${stamped.length} verified & fresh · ${leads.length - stamped.length} skipped`
           ]
         }
       }))
@@ -207,7 +195,7 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
       if (stamped.length > 0) {
         onLeadsFound?.(stamped)
       } else {
-        log('⚠️ No verified live postings found this run — try again later or check search queries')
+        log(id, '⚠️ No verified live postings this run — try again later')
       }
 
     } catch (e) {
@@ -228,16 +216,16 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
       name: 'Agent 1 — Job Scout',
       icon: Bot,
       color: 'var(--accent)',
-      desc: `Searches TekSystems, Kforce, The Judge Group, Insight Global, CyberCoders, LinkedIn, Indeed — Houston · Dallas · Austin · Remote. Only returns real, live postings with verified URLs.`,
-      sources: SEARCHES_AGENT1.length,
+      desc: 'Searches Kforce, TekSystems, Judge Group, LinkedIn, Indeed — Houston · Dallas · Austin · Remote. Only returns real, live postings with verified URLs.',
+      searches: SEARCHES_AGENT1,
     },
     {
       id: 2,
       name: 'Agent 2 — FSI & Boutique',
       icon: Zap,
       color: 'var(--accent2)',
-      desc: `Searches JPMC, Wells Fargo, USAA, Schwab, Fidelity, Slalom, West Monroe, Pariveda, Capco, Deloitte (returnee), KPMG, City of Houston, Harris County directly on their career pages. Only returns real, live postings.`,
-      sources: SEARCHES_AGENT2.length,
+      desc: 'Searches Capco, Deloitte, Slalom, KPMG, Harris County directly on their career pages. Only returns real, live postings.',
+      searches: SEARCHES_AGENT2,
     },
   ]
 
@@ -246,18 +234,17 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
       <div className="page-header">
         <div className="page-title">Agents</div>
         <div className="page-sub">
-          Real web search — every lead is a verified live posting · No simulated or fabricated results
+          Real web search — every lead is a verified live posting · No simulated results
         </div>
       </div>
 
-      {/* Warning banner */}
       <div style={{
         padding: '10px 14px', marginBottom: 16,
         background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)',
         borderRadius: 'var(--radius)', fontSize: 11, color: 'var(--accent)',
-        fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: 8,
+        fontFamily: 'var(--font-mono)',
       }}>
-        ✓ Web search enabled — agents search live job sites and only return postings they actually find
+        ✓ Web search enabled · Model: claude-sonnet-4-6 · 5 queries per agent to stay within rate limits
       </div>
 
       <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
@@ -284,7 +271,7 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{a.name}</div>
                     <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 8 }}>{a.desc}</div>
                     <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>
-                      {a.sources} search queries · Results verified live before adding to leads
+                      {a.searches.length} search queries · Results verified live before adding to leads
                     </div>
                   </div>
                 </div>
@@ -300,7 +287,6 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
                 </button>
               </div>
 
-              {/* Status row */}
               <div style={{
                 display: 'flex', gap: 16, marginTop: 12, paddingTop: 12,
                 borderTop: '1px solid var(--border)',
@@ -322,55 +308,41 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
                 </span>
               </div>
 
-              {/* Log */}
               {s.log?.length > 0 && (
                 <div style={{
                   marginTop: 10, padding: '8px 10px',
                   background: 'var(--bg)', borderRadius: 'var(--radius)',
                   border: '1px solid var(--border)',
                   fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text3)',
-                  maxHeight: 100, overflowY: 'auto',
+                  maxHeight: 120, overflowY: 'auto',
                 }}>
-                  {s.log.map((l, i) => (
-                    <div key={i} style={{ color: l.includes('❌') ? 'var(--danger)' : l.includes('✅') ? 'var(--success)' : l.includes('⚠️') ? 'var(--warn)' : 'var(--text3)' }}>
-                      {l}
+                  {s.log.map((line, i) => (
+                    <div key={i} style={{
+                      color: line.includes('❌') ? 'var(--danger)'
+                        : line.includes('✅') ? 'var(--success)'
+                        : line.includes('⚠️') ? 'var(--warn)'
+                        : 'var(--text3)'
+                    }}>
+                      {line}
                     </div>
                   ))}
                 </div>
               )}
+
+              <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {a.searches.map((q, i) => (
+                  <span key={i} style={{
+                    fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)',
+                    background: 'var(--bg3)', border: '1px solid var(--border)',
+                    borderRadius: 4, padding: '3px 7px',
+                  }}>{q}</span>
+                ))}
+              </div>
             </div>
           )
         })}
       </div>
 
-      {/* What agents search */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-title">Search queries — Agent 1 (Staffing + Job Boards)</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-          {SEARCHES_AGENT1.map((s, i) => (
-            <span key={i} style={{
-              fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)',
-              background: 'var(--bg3)', border: '1px solid var(--border)',
-              borderRadius: 4, padding: '3px 7px',
-            }}>{s}</span>
-          ))}
-        </div>
-      </div>
-
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-title">Search queries — Agent 2 (FSI + Consulting + Govt)</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-          {SEARCHES_AGENT2.map((s, i) => (
-            <span key={i} style={{
-              fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)',
-              background: 'var(--bg3)', border: '1px solid var(--border)',
-              borderRadius: 4, padding: '3px 7px',
-            }}>{s}</span>
-          ))}
-        </div>
-      </div>
-
-      {/* Scheduling */}
       <div className="card">
         <div className="card-title">Auto-scheduling options</div>
         <div style={{ display: 'grid', gap: 10 }}>
@@ -379,7 +351,7 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
               display: 'flex', gap: 12, padding: '10px 0',
               borderBottom: i < AUTOMATION.length - 1 ? '1px solid var(--border)' : 'none',
             }}>
-              <div style={{ minWidth: 80, fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--accent)', paddingTop: 1, textAlign: 'right' }}>
+              <div style={{ minWidth: 90, fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--accent)', paddingTop: 1, textAlign: 'right' }}>
                 {opt.effort}
               </div>
               <div>
