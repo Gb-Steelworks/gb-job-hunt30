@@ -228,7 +228,7 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
         }
       }))
 
-      if (stamped.length > 0) onLeadsFound?.(stamped)
+      if (stamped.length > 0) setTimeout(() => onLeadsFound?.(stamped), 500)
       else addLog(id, '⚠️ No leads returned — try again')
 
     } catch (e) {
