@@ -9,7 +9,7 @@ import DashboardPage from './pages/DashboardPage.jsx'
 import ResumeVaultPage from './pages/ResumeVaultPage.jsx'
 import { useAppStore } from './store/useAppStore.js'
 
-const DAYS_LEFT = Math.max(0, Math.ceil((new Date('2026-06-03') - new Date()) / (1000 * 60 * 60 * 24)))
+const DAYS_LEFT = Math.max(0, Math.ceil((new Date('2026-06-10') - new Date()) / (1000 * 60 * 60 * 24)))
 
 const NAV = [
   { id: 'dashboard',    label: 'Dashboard',    icon: BarChart2,  section: 'Overview' },
