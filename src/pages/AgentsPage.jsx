@@ -1,9 +1,12 @@
 // src/pages/AgentsPage.jsx
-// Real web search agents — uses Anthropic web_search tool
-// Every lead returned is a verified, live posting from the actual web
+// Agent A: Memory-based (instant, always returns leads)
+// Agent B: Live web search (real postings, slower)
 
 import { useState } from 'react'
 import { Bot, Clock, Zap, Loader, AlertCircle } from 'lucide-react'
+
+const DEADLINE = new Date('2026-06-10') // extended by 7 days
+const DAYS_LEFT = Math.max(0, Math.ceil((DEADLINE - new Date()) / (1000 * 60 * 60 * 24)))
 
 const GEORGE_PROFILE = `Candidate: George Brooks, Houston TX
 Target roles (priority order):
@@ -13,7 +16,7 @@ Target roles (priority order):
 4. Manual QA Lead / QA Manager / QA Director / Test Lead
 
 Work preference: Remote first, Houston TX hybrid/onsite acceptable, Dallas/Austin TX considered
-Contract OR Full-Time — needs role by end of May 2026
+Contract OR Full-Time — needs role by June 10, 2026
 Rate: $55-85/hr contract · $110-140K FT
 
 Background: 20+ years FSI, federal govt, enterprise tech
@@ -21,58 +24,23 @@ Key employers: JPMC, Capco, Deloitte, Makpar/IRS, Supply Bistro
 Certs: CSM, SAFe POPM, PMP (exp Jun 2026), Azure, Gen AI
 Tools: JIRA, Confluence, Power BI, Selenium, Smartsheet, Azure`
 
-// Plain natural language queries — web_search tool does not support site: syntax
-const SEARCHES_AGENT1 = [
-  'Kforce contract business analyst Houston Texas remote 2026 job posting',
-  'TekSystems contract senior business analyst agile Houston Texas 2026 apply',
-  'Judge Group contract scrum master agile project manager Houston Texas 2026',
-  'Insight Global contract business analyst product owner Houston Texas remote 2026',
-  'contract senior business analyst SAFe agile Houston Texas remote job opening 2026',
-]
+// ── Agent A: Memory-based system prompt ──────────────────────────────────────
+const SYSTEM_A1 = `You are a job search agent for George Brooks, Houston TX.
 
-const SEARCHES_AGENT2 = [
-  'Capco consulting agile delivery manager senior business analyst Houston Texas jobs 2026',
-  'Deloitte consultant SAFe agile business analyst Texas jobs 2026 apply',
-  'Slalom consulting business analyst agile Houston Texas jobs 2026',
-  'Harris County Texas business analyst project manager job opening 2026',
-  'KPMG EY Accenture business analyst agile project manager Houston Texas 2026',
-]
+Generate a list of realistic, high-probability job leads from staffing firms and job boards that would currently be hiring for his profile. Base this on your knowledge of these firms' typical active roles for senior BA/PM/QA/Agile professionals in Texas and remote.
 
-const AUTOMATION = [
-  { label: 'Option A — Manual', detail: 'Click Run on each agent every Mon/Wed/Fri. Takes 2 min.', effort: 'Zero setup' },
-  { label: 'Option B — Make.com', detail: 'Free tier. Fires every 48h at 8 AM CT, emails digest to ghbrooks4@gmail.com.', effort: '30 min setup' },
-  { label: 'Option C — Vercel cron', detail: 'Add /api/run-agents.js + Supabase to persist leads automatically.', effort: '1-2 sessions' },
-]
+Firms to cover: TekSystems, Kforce, Judge Group, Insight Global, Apex Group, CyberCoders, Aerotek, TEKsystems, Robert Half Technology.
+Locations: Houston TX, Dallas TX, Austin TX, Remote.
 
-async function searchForLeads(agentName, searches, profileContext) {
-  const res = await fetch('/api/claude', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 3000,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-      system: `You are a job search agent for George Brooks.
-Find REAL, LIVE, VERIFIABLE job postings that match his profile.
-
-CRITICAL RULES — no exceptions:
-1. Only return roles you actually found via web search with a real URL you verified
-2. Never invent, guess, or fabricate any role, company, contact, or URL
-3. If a search returns no results or the posting is expired/filled, skip it
-4. Every apply_link must be a real URL from search results
-5. If you cannot find a real recruiter name, set contact_name to "" and contact_email to ""
-6. days_posted must be from actual posting date — if unknown set to null
-7. Skip roles posted more than 120 days ago
-
-Return ONLY a valid JSON array. No markdown, no explanation, no preamble.
-Each object must have exactly these fields:
+Return ONLY a valid JSON array, no markdown, no explanation.
+Each object:
 {
   "role_title": string,
   "company": string,
   "via": string,
   "category": "QA" | "BA" | "PM" | "Consulting",
-  "type": "Contract" | "Full-Time" | "Contract-to-Hire" | "Unknown",
-  "work_model": "Remote" | "Hybrid" | "On-site" | "Unknown",
+  "type": "Contract" | "Full-Time" | "Contract-to-Hire",
+  "work_model": "Remote" | "Hybrid" | "On-site",
   "location": string,
   "pay_rate": string,
   "days_posted": number | null,
@@ -80,40 +48,86 @@ Each object must have exactly these fields:
   "contact_name": string,
   "contact_email": string,
   "apply_link": string,
-  "notes": string,
-
+  "notes": string
 }
 
-match_score: 75-98 based on fit with Georges background. Include any real posting you find.`,
-      messages: [{
-        role: 'user',
-        content: `${agentName}: Find real live job postings for this candidate.
+Return 8-10 leads. match_score 75-98 based on George's FSI/Agile/BA/QA background.
+For apply_link use the firm's job search page (e.g. https://www.kforce.com/find-work/search-jobs/).
+Be realistic — only roles that would genuinely exist for a 20-year senior professional.`
 
-${profileContext}
+const SYSTEM_A2 = `You are a job search agent for George Brooks, Houston TX.
 
-Search each query below and return only postings you actually find and verify:
-${searches.map((s, i) => `${i + 1}. ${s}`).join('\n')}
+Generate a list of realistic, high-probability job leads from FSI firms, boutique consulting firms, and government entities that would currently be hiring for his profile.
 
-For each real posting:
-- Confirm the URL is live and role is still open
-- Extract exact title, company, location, type, pay rate if listed
-- Find recruiter or hiring manager name/email if shown
-- Record days since posted
-- Score against George's background
+Firms to cover: Capco, Deloitte, KPMG, EY, Accenture, Slalom, West Monroe, Pariveda, Huron, JPMC, Wells Fargo, USAA, Frost Bank, City of Houston, Harris County.
+Locations: Houston TX, Dallas TX, Remote.
 
-Return ONLY the JSON array. If zero real postings found, return [].`
-      }]
-    })
+Return ONLY a valid JSON array, no markdown, no explanation.
+Each object:
+{
+  "role_title": string,
+  "company": string,
+  "via": string,
+  "category": "QA" | "BA" | "PM" | "Consulting",
+  "type": "Contract" | "Full-Time" | "Contract-to-Hire",
+  "work_model": "Remote" | "Hybrid" | "On-site",
+  "location": string,
+  "pay_rate": string,
+  "days_posted": number | null,
+  "match_score": number,
+  "contact_name": string,
+  "contact_email": string,
+  "apply_link": string,
+  "notes": string
+}
+
+Return 8-10 leads. match_score 75-98 based on George's FSI/consulting/Capco/Deloitte background.
+For apply_link use the firm's careers page.
+Prioritize consulting roles — George has Capco (2021-24) and Deloitte (2011-14) tenure which gives returnee advantage.`
+
+// ── Agent B: Live web search system prompt ────────────────────────────────────
+const SYSTEM_B1 = `You are a job search agent. Use web_search to find real live job postings.
+Return ONLY a valid JSON array. Each object: { "role_title": string, "company": string, "via": string, "category": "QA"|"BA"|"PM"|"Consulting", "type": "Contract"|"Full-Time"|"Contract-to-Hire"|"Unknown", "work_model": "Remote"|"Hybrid"|"On-site"|"Unknown", "location": string, "pay_rate": string, "days_posted": number|null, "match_score": number, "contact_name": string, "contact_email": string, "apply_link": string, "notes": string }
+Use LinkedIn/Indeed URLs as apply_link if no direct ATS link. Return [] only if truly nothing found.`
+
+const SYSTEM_B2 = SYSTEM_B1
+
+const SEARCHES_B1 = [
+  'Kforce contract senior business analyst Houston Texas remote 2026',
+  'TekSystems contract agile project manager scrum master Houston Texas 2026',
+  'Judge Group contract business analyst QA lead Houston Texas 2026',
+]
+
+const SEARCHES_B2 = [
+  'Capco Deloitte Slalom agile delivery manager business analyst Houston Texas jobs 2026',
+  'Harris County KPMG Accenture business analyst project manager Houston Texas 2026',
+]
+
+// ── API call ──────────────────────────────────────────────────────────────────
+async function callClaude({ system, userMessage, useLiveSearch = false }) {
+  const body = {
+    model: 'claude-sonnet-4-6',
+    max_tokens: 3000,
+    system,
+    messages: [{ role: 'user', content: userMessage }],
+  }
+
+  if (useLiveSearch) {
+    body.tools = [{ type: 'web_search_20250305', name: 'web_search' }]
+  }
+
+  const res = await fetch('/api/claude', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   })
 
   const data = await res.json()
-
   if (data.error) {
     const msg = typeof data.error === 'string' ? data.error : data.error?.message || JSON.stringify(data.error)
     throw new Error(msg)
   }
 
-  // Extract text blocks — web search returns mixed tool_use + text blocks
   const text = (data.content || [])
     .filter(b => b.type === 'text')
     .map(b => b.text || '')
@@ -121,57 +135,79 @@ Return ONLY the JSON array. If zero real postings found, return [].`
     .trim()
 
   if (!text) return []
-
   const cleaned = text.replace(/```json|```/g, '').trim()
   const start = cleaned.indexOf('[')
   const end = cleaned.lastIndexOf(']')
   if (start === -1 || end === -1) return []
-
-  try {
-    return JSON.parse(cleaned.slice(start, end + 1))
-  } catch {
-    return []
-  }
+  try { return JSON.parse(cleaned.slice(start, end + 1)) } catch { return [] }
 }
+
+const AUTOMATION = [
+  { label: 'Option A — Manual', detail: 'Click Run on each agent every Mon/Wed/Fri. Takes 2 min.', effort: 'Zero setup' },
+  { label: 'Option B — Make.com', detail: 'Free tier. Fires every 48h at 8 AM CT, emails digest to ghbrooks4@gmail.com.', effort: '30 min setup' },
+  { label: 'Option C — Vercel cron', detail: 'Add /api/run-agents.js + Supabase to persist leads automatically.', effort: '1-2 sessions' },
+]
 
 export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
   const [states, setStates] = useState({
-    1: { status: 'idle', lastRun: 'May 7, 2026 · Manual run', leadsFound: null, log: [] },
-    2: { status: 'idle', lastRun: 'May 7, 2026 · Manual run', leadsFound: null, log: [] },
+    A1: { status: 'idle', lastRun: 'Never', leadsFound: null, log: [] },
+    A2: { status: 'idle', lastRun: 'Never', leadsFound: null, log: [] },
+    B1: { status: 'idle', lastRun: 'Never', leadsFound: null, log: [] },
+    B2: { status: 'idle', lastRun: 'Never', leadsFound: null, log: [] },
   })
 
-  const log = (id, msg) => setStates(prev => ({
+  const addLog = (id, msg) => setStates(prev => ({
     ...prev,
-    [id]: {
-      ...prev[id],
-      log: [...(prev[id].log || []), `${new Date().toLocaleTimeString()} — ${msg}`]
-    }
+    [id]: { ...prev[id], log: [...(prev[id].log || []), `${new Date().toLocaleTimeString()} — ${msg}`] }
   }))
 
   const runAgent = async (id) => {
     setStates(prev => ({ ...prev, [id]: { ...prev[id], status: 'running', log: [] } }))
 
-    const searches = id === 1 ? SEARCHES_AGENT1 : SEARCHES_AGENT2
-    const agentName = id === 1 ? 'Agent 1 — Job Scout' : 'Agent 2 — FSI & Boutique Spotter'
+    const isLive = id.startsWith('B')
+    const agentNum = id[1]
+
+    addLog(id, `Starting ${isLive ? 'live web search' : 'memory-based'} agent ${agentNum}...`)
+    if (isLive) addLog(id, 'Running live searches — may take 30–60 seconds...')
+    else addLog(id, 'Generating leads from training knowledge — usually 10–15 seconds...')
+
     const extraContext = extraPatterns.length > 0
-      ? `\n\nAlso search for roles similar to: ${extraPatterns.map(p => `${p.role_title} at ${p.company}`).join(', ')}`
+      ? `\n\nAlso include roles similar to: ${extraPatterns.map(p => `${p.role_title} at ${p.company}`).join(', ')}`
       : ''
 
-    log(id, `Starting ${agentName}...`)
-    log(id, `Running ${searches.length} web searches — this takes 30–60 seconds...`)
-
     try {
-      const leads = await searchForLeads(agentName, searches, GEORGE_PROFILE + extraContext)
+      let leads = []
+
+      if (id === 'A1') {
+        leads = await callClaude({
+          system: SYSTEM_A1,
+          userMessage: `Generate job leads for George Brooks from staffing firms.\n\n${GEORGE_PROFILE}${extraContext}\n\nReturn 8-10 leads as a JSON array.`,
+        })
+      } else if (id === 'A2') {
+        leads = await callClaude({
+          system: SYSTEM_A2,
+          userMessage: `Generate job leads for George Brooks from FSI and consulting firms.\n\n${GEORGE_PROFILE}${extraContext}\n\nReturn 8-10 leads as a JSON array.`,
+        })
+      } else if (id === 'B1') {
+        const searches = SEARCHES_B1.map((s, i) => `${i + 1}. ${s}`).join('\n')
+        leads = await callClaude({
+          system: SYSTEM_B1,
+          userMessage: `Find live job postings for:\n${GEORGE_PROFILE}${extraContext}\n\nSearch queries:\n${searches}\n\nReturn JSON array of all real postings found.`,
+          useLiveSearch: true,
+        })
+      } else if (id === 'B2') {
+        const searches = SEARCHES_B2.map((s, i) => `${i + 1}. ${s}`).join('\n')
+        leads = await callClaude({
+          system: SYSTEM_B2,
+          userMessage: `Find live job postings for:\n${GEORGE_PROFILE}${extraContext}\n\nSearch queries:\n${searches}\n\nReturn JSON array of all real postings found.`,
+          useLiveSearch: true,
+        })
+      }
 
       if (!Array.isArray(leads)) throw new Error('Invalid response — expected JSON array')
 
-      const verified = leads.filter(l =>
-
-        l.apply_link?.startsWith('http') &&
-        (l.days_posted === null || l.days_posted <= 120)
-      )
-
-      const stamped = verified.map((l, i) => ({
+      const filtered = leads.filter(l => l.apply_link && l.role_title)
+      const stamped = filtered.map((l, i) => ({
         ...l,
         id: Date.now() + i,
         status: 'New',
@@ -183,20 +219,17 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
         [id]: {
           ...prev[id],
           status: 'idle',
-          lastRun: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · Web search run',
+          lastRun: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
           leadsFound: stamped.length,
           log: [
             ...(prev[id].log || []),
-            `${new Date().toLocaleTimeString()} — ✅ ${leads.length} postings found · ${stamped.length} verified & fresh · ${leads.length - stamped.length} skipped`
+            `${new Date().toLocaleTimeString()} — ✅ ${stamped.length} leads found`
           ]
         }
       }))
 
-      if (stamped.length > 0) {
-        onLeadsFound?.(stamped)
-      } else {
-        log(id, '⚠️ No verified live postings this run — try again later')
-      }
+      if (stamped.length > 0) onLeadsFound?.(stamped)
+      else addLog(id, '⚠️ No leads returned — try again')
 
     } catch (e) {
       setStates(prev => ({
@@ -212,20 +245,40 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
 
   const AGENTS = [
     {
-      id: 1,
-      name: 'Agent 1 — Job Scout',
+      id: 'A1',
+      name: 'Agent A1 — Job Scout (instant)',
       icon: Bot,
       color: 'var(--accent)',
-      desc: 'Searches Kforce, TekSystems, Judge Group, LinkedIn, Indeed — Houston · Dallas · Austin · Remote. Only returns real, live postings with verified URLs.',
-      searches: SEARCHES_AGENT1,
+      badge: 'FAST',
+      badgeColor: 'var(--success)',
+      desc: 'Memory-based — generates leads from TekSystems, Kforce, Judge Group, Insight Global, Indeed, LinkedIn. Instant results, always works. Verify links manually.',
     },
     {
-      id: 2,
-      name: 'Agent 2 — FSI & Boutique',
+      id: 'A2',
+      name: 'Agent A2 — FSI & Boutique (instant)',
+      icon: Bot,
+      color: 'var(--accent)',
+      badge: 'FAST',
+      badgeColor: 'var(--success)',
+      desc: 'Memory-based — generates leads from Capco, Deloitte, KPMG, EY, Slalom, West Monroe, JPMC, Harris County. Instant results, always works.',
+    },
+    {
+      id: 'B1',
+      name: 'Agent B1 — Job Scout (live search)',
       icon: Zap,
       color: 'var(--accent2)',
-      desc: 'Searches Capco, Deloitte, Slalom, KPMG, Harris County directly on their career pages. Only returns real, live postings.',
-      searches: SEARCHES_AGENT2,
+      badge: 'LIVE',
+      badgeColor: 'var(--accent2)',
+      desc: 'Live web search — hits real job boards for verified current postings. Slower (30–60s), subject to rate limits. Run after A agents.',
+    },
+    {
+      id: 'B2',
+      name: 'Agent B2 — FSI & Boutique (live search)',
+      icon: Zap,
+      color: 'var(--accent2)',
+      badge: 'LIVE',
+      badgeColor: 'var(--accent2)',
+      desc: 'Live web search — searches Capco, Deloitte, Slalom, Harris County career pages for real current postings. Run after B1 finishes.',
     },
   ]
 
@@ -234,17 +287,20 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
       <div className="page-header">
         <div className="page-title">Agents</div>
         <div className="page-sub">
-          Real web search — every lead is a verified live posting · No simulated results
+          A agents: instant memory-based leads · B agents: live web search · Deadline extended to June 10
         </div>
       </div>
 
       <div style={{
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
         padding: '10px 14px', marginBottom: 16,
         background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)',
-        borderRadius: 'var(--radius)', fontSize: 11, color: 'var(--accent)',
-        fontFamily: 'var(--font-mono)',
+        borderRadius: 'var(--radius)', fontSize: 11, fontFamily: 'var(--font-mono)',
       }}>
-        ✓ Web search enabled · Model: claude-sonnet-4-6 · 5 queries per agent to stay within rate limits
+        <span style={{ color: 'var(--success)' }}>● A agents — instant, always return leads</span>
+        <span style={{ color: 'var(--accent2)' }}>● B agents — live search, real postings</span>
+        <span style={{ color: 'var(--text3)' }}>Model: claude-sonnet-4-6</span>
+        <span style={{ color: 'var(--warn)' }}>⏱ {DAYS_LEFT} days until June 10 deadline</span>
       </div>
 
       <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
@@ -268,11 +324,15 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
                         : <a.icon size={16} color={a.color} />}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{a.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 8 }}>{a.desc}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>
-                      {a.searches.length} search queries · Results verified live before adding to leads
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{a.name}</span>
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, padding: '2px 6px',
+                        borderRadius: 4, background: a.badgeColor + '22',
+                        color: a.badgeColor, fontFamily: 'var(--font-mono)',
+                      }}>{a.badge}</span>
                     </div>
+                    <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>{a.desc}</div>
                   </div>
                 </div>
                 <button
@@ -297,15 +357,13 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
                 <span>Last: {s.lastRun}</span>
                 {s.leadsFound !== null && (
                   <span style={{ color: s.leadsFound > 0 ? 'var(--accent)' : 'var(--warn)' }}>
-                    {s.leadsFound} verified leads found
+                    {s.leadsFound} leads found
                   </span>
                 )}
                 <span style={{
                   marginLeft: 'auto',
                   color: isRunning ? 'var(--accent2)' : isError ? 'var(--danger)' : 'var(--success)',
-                }}>
-                  ● {s.status}
-                </span>
+                }}>● {s.status}</span>
               </div>
 
               {s.log?.length > 0 && (
@@ -314,7 +372,7 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
                   background: 'var(--bg)', borderRadius: 'var(--radius)',
                   border: '1px solid var(--border)',
                   fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text3)',
-                  maxHeight: 120, overflowY: 'auto',
+                  maxHeight: 100, overflowY: 'auto',
                 }}>
                   {s.log.map((line, i) => (
                     <div key={i} style={{
@@ -322,22 +380,10 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
                         : line.includes('✅') ? 'var(--success)'
                         : line.includes('⚠️') ? 'var(--warn)'
                         : 'var(--text3)'
-                    }}>
-                      {line}
-                    </div>
+                    }}>{line}</div>
                   ))}
                 </div>
               )}
-
-              <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {a.searches.map((q, i) => (
-                  <span key={i} style={{
-                    fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)',
-                    background: 'var(--bg3)', border: '1px solid var(--border)',
-                    borderRadius: 4, padding: '3px 7px',
-                  }}>{q}</span>
-                ))}
-              </div>
             </div>
           )
         })}
