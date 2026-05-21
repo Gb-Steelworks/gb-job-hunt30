@@ -106,7 +106,7 @@ export default function App() {
         <div className="sidebar-deadline">
           <div className="label">Deadline</div>
           <div className="days">{DAYS_LEFT}</div>
-          <div className="until">days until June 3</div>
+          <div className="until">days until June 10</div>
         </div>
         <nav className="nav">
           {NAV.map(item => {
