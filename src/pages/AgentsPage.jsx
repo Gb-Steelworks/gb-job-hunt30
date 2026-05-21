@@ -2,7 +2,8 @@
 // Agent A: Memory-based (instant, always returns leads)
 // Agent B: Live web search (real postings, slower)
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { getAgentRun, setAgentRun } from '../store/agentStore.js'
 import { Bot, Clock, Zap, Loader, AlertCircle } from 'lucide-react'
 
 const DEADLINE = new Date('2026-06-10') // extended by 7 days
@@ -149,11 +150,12 @@ const AUTOMATION = [
 ]
 
 export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
-  const [states, setStates] = useState({
-    A1: { status: 'idle', lastRun: 'Never', leadsFound: null, log: [] },
-    A2: { status: 'idle', lastRun: 'Never', leadsFound: null, log: [] },
-    B1: { status: 'idle', lastRun: 'Never', leadsFound: null, log: [] },
-    B2: { status: 'idle', lastRun: 'Never', leadsFound: null, log: [] },
+  const [states, setStates] = useState(() => {
+    const ids = ['A1', 'A2', 'B1', 'B2']
+    return Object.fromEntries(ids.map(id => {
+      const saved = getAgentRun(id)
+      return [id, { status: 'idle', lastRun: saved.lastRun, leadsFound: saved.leadsFound, log: [] }]
+    }))
   })
 
   const addLog = (id, msg) => setStates(prev => ({
@@ -228,8 +230,12 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
         }
       }))
 
-      if (stamped.length > 0) setTimeout(() => onLeadsFound?.(stamped), 500)
-      else addLog(id, '⚠️ No leads returned — try again')
+      if (stamped.length > 0) {
+        setAgentRun(id, new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), stamped.length)
+        setTimeout(() => onLeadsFound?.(stamped), 300)
+      } else {
+        addLog(id, '⚠️ No leads returned — try again')
+      }
 
     } catch (e) {
       setStates(prev => ({
