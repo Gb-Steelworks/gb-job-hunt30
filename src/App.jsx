@@ -1,4 +1,4 @@
-// App.jsx — drop-in replacement
+//  App.jsx — drop-in replacement
 // Adds: hamburger menu button on mobile, overlay dismiss, nav closes on page select
 
 import { useState } from 'react'
