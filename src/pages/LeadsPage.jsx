@@ -10,7 +10,7 @@ const SEED_LEADS = [
   {
     id: 1, role_title: 'IT QA Specialist IV', company: 'Enbridge / Raise',
     via: 'Raise Recruiting', category: 'QA', type: 'Contract', work_model: 'Hybrid',
-    pay_rate: '$54-57/hr W2', days_posted: 26, match_score: 95,
+    pay_rate: '$54-57/hr W2', date_found: "2026-05-08", match_score: 95,
     contact_name: 'Raise Recruiting', contact_email: 'hello@raiserecruiting.com',
     status: 'New', notes: '',
     apply_link: 'https://raiserecruiting.com/job-postings/?s=enbridge+QA'
@@ -18,7 +18,7 @@ const SEED_LEADS = [
   {
     id: 3, role_title: 'Sr. BA - Customer Comms', company: 'TEKsystems (FSI)',
     via: 'TEKsystems', category: 'BA', type: 'Contract', work_model: 'Remote',
-    pay_rate: 'TBD', days_posted: 7, match_score: 91,
+    pay_rate: 'TBD', date_found: "2026-05-27", match_score: 91,
     contact_name: 'Kape Kelly', contact_email: 'PatrKelly@teksystems.com',
     status: 'New', notes: '',
     apply_link: 'https://careers.teksystems.com/us/en'
@@ -26,7 +26,7 @@ const SEED_LEADS = [
   {
     id: 5, role_title: 'Appian QA Tester', company: 'KBR',
     via: 'Direct', category: 'QA', type: 'Full-Time', work_model: 'On-site',
-    pay_rate: 'TBD', days_posted: 52, match_score: 88,
+    pay_rate: 'TBD', date_found: "2026-04-12", match_score: 88,
     contact_name: 'KBR Talent Acquisition', contact_email: '',
     status: 'New', notes: '',
     apply_link: 'https://kbr.wd5.myworkdayjobs.com/en-US/kbr_careers/job/Houston-Texas/Appian-Software-QA-Tester_R2119912'
@@ -34,7 +34,7 @@ const SEED_LEADS = [
   {
     id: 6, role_title: 'Sr. Agile Scrum Master', company: 'CrowdPlat',
     via: 'LinkedIn', category: 'PM', type: 'Contract', work_model: 'Remote',
-    pay_rate: 'TBD', days_posted: 14, match_score: 85,
+    pay_rate: 'TBD', date_found: "2026-05-20", match_score: 85,
     contact_name: 'CrowdPlat Recruiting', contact_email: '',
     status: 'New', notes: '',
     apply_link: 'https://www.linkedin.com/jobs/view/4402322679'
@@ -42,7 +42,7 @@ const SEED_LEADS = [
   {
     id: 7, role_title: 'QA Analyst / BA', company: 'Grenza Inc.',
     via: 'Indeed', category: 'QA', type: 'Contract', work_model: 'On-site',
-    pay_rate: 'TBD', days_posted: 30, match_score: 80,
+    pay_rate: 'TBD', date_found: "2026-05-04", match_score: 80,
     contact_name: 'Grenza HR', contact_email: '',
     status: 'New', notes: '',
     apply_link: 'http://www.grenza.com/index.php/ct-careers'
@@ -51,7 +51,7 @@ const SEED_LEADS = [
   {
     id: 9, role_title: 'Agile & Data Management Business Analyst', company: 'Kforce (Consumer Electronics Client)',
     via: 'Kforce', category: 'BA', type: 'Contract', work_model: 'Hybrid',
-    pay_rate: '$65-70/hr', days_posted: 5, match_score: 94,
+    pay_rate: '$65-70/hr', date_found: "2026-05-29", match_score: 94,
     contact_name: 'Cole Withers', contact_email: '',
     status: 'New', notes: 'Epics, user stories, SOPs, data architecture. Strong George match.',
     apply_link: 'https://www.kforce.com/find-work/search-jobs/?keyword=business+analyst+houston'
@@ -59,7 +59,7 @@ const SEED_LEADS = [
   {
     id: 10, role_title: 'Business Analyst / Product Owner', company: 'Kforce',
     via: 'Kforce', category: 'BA', type: 'Contract', work_model: 'Hybrid',
-    pay_rate: 'TBD', days_posted: 8, match_score: 92,
+    pay_rate: 'TBD', date_found: "2026-05-26", match_score: 92,
     contact_name: 'Cole Withers', contact_email: '',
     status: 'New', notes: 'Requirements mgmt, change mgmt, stakeholder coordination.',
     apply_link: 'https://www.kforce.com/find-work/search-jobs/?keyword=product+owner+houston'
@@ -67,7 +67,7 @@ const SEED_LEADS = [
   {
     id: 39, role_title: 'IT Project Manager', company: 'Kforce (Client - Irving TX)',
     via: 'Kforce Dallas', category: 'PM', type: 'Contract', work_model: 'Hybrid',
-    pay_rate: 'TBD', days_posted: 5, match_score: 93,
+    pay_rate: 'TBD', date_found: "2026-05-29", match_score: 93,
     contact_name: 'Kforce Dallas Recruiting', contact_email: '',
     status: 'New', notes: 'Irving TX (Dallas area). Central coordination between business stakeholders, product owners, delivery teams. Backlog mgmt, requirements gathering, stakeholder updates. Spotted by George on Kforce.com 5/4/26.',
     apply_link: 'https://www.kforce.com/find-work/search-jobs/?keyword=IT+project+manager&location=Dallas%2C+TX'
@@ -77,7 +77,7 @@ const SEED_LEADS = [
   {
     id: 13, role_title: 'Salesforce QA Analyst', company: 'Insight Global (FSI Client)',
     via: 'Dice', category: 'QA', type: 'Contract', work_model: 'Remote',
-    pay_rate: 'TBD', days_posted: 4, match_score: 84,
+    pay_rate: 'TBD', date_found: "2026-05-30", match_score: 84,
     contact_name: 'Insight Global Houston', contact_email: '',
     status: 'New', notes: '6 months+, Agile delivery team, Salesforce CRM + Experience Cloud.',
     apply_link: 'https://www.insightglobal.com/jobs/?search=salesforce+QA+analyst+remote'
@@ -85,7 +85,7 @@ const SEED_LEADS = [
   {
     id: 15, role_title: 'MS Dynamics 365 ERP Project Manager', company: 'Crowe LLP',
     via: 'Direct - careers.crowe.com', category: 'PM', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: 'TBD', days_posted: 14, match_score: 87,
+    pay_rate: 'TBD', date_found: "2026-05-20", match_score: 87,
     contact_name: 'Crowe LLP Experienced Hiring', contact_email: '',
     status: 'New', notes: 'Houston TX. 5-8 yrs ERP PM, initiation through delivery. Crowe consulting culture similar to Deloitte/Capco background.',
     apply_link: 'https://careers.crowe.com/experienced-careers'
@@ -93,7 +93,7 @@ const SEED_LEADS = [
   {
     id: 26, role_title: 'HCM/Payroll BA & Systems Implementation Lead', company: 'Crowe LLP',
     via: 'Direct - careers.crowe.com', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: 'TBD', days_posted: 10, match_score: 85,
+    pay_rate: 'TBD', date_found: "2026-05-24", match_score: 85,
     contact_name: 'Crowe LLP Experienced Hiring', contact_email: '',
     status: 'New', notes: 'Houston TX. Public sector BA + implementation lead. Strong Makpar/IRS background is a differentiator here.',
     apply_link: 'https://careers.crowe.com/experienced-careers'
@@ -102,7 +102,7 @@ const SEED_LEADS = [
   {
     id: 16, role_title: 'Product Owner - Digital Banking', company: 'Frost Bank',
     via: 'Direct', category: 'PM', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: '$110-130K', days_posted: 18, match_score: 93,
+    pay_rate: '$110-130K', date_found: "2026-05-16", match_score: 93,
     contact_name: 'Frost Bank HR', contact_email: '',
     status: 'New', notes: 'San Antonio TX. George has direct JPMC mobile banking experience.',
     apply_link: 'https://www.frostbank.com/about/careers'
@@ -110,7 +110,7 @@ const SEED_LEADS = [
   {
     id: 17, role_title: 'Sr. Agile Delivery Manager', company: 'Slalom Consulting',
     via: 'Direct', category: 'PM', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: '$130-150K', days_posted: 9, match_score: 92,
+    pay_rate: '$130-150K', date_found: "2026-05-25", match_score: 92,
     contact_name: 'Slalom Houston Recruiting', contact_email: '',
     status: 'New', notes: 'Houston TX. Strong Capco/Deloitte background is ideal for Slalom.',
     apply_link: 'https://www.slalom.com/us/en/careers'
@@ -118,7 +118,7 @@ const SEED_LEADS = [
   {
     id: 18, role_title: 'Product Owner / BA - Mortgage & Insurance', company: 'West Monroe Partners',
     via: 'ZipRecruiter', category: 'PM', type: 'Contract', work_model: 'On-site',
-    pay_rate: 'TBD', days_posted: 3, match_score: 91,
+    pay_rate: 'TBD', date_found: "2026-05-31", match_score: 91,
     contact_name: 'West Monroe Houston', contact_email: '',
     status: 'New', notes: '8+ yrs PO/BA, JIRA/Confluence, Agile/Scrum, TRID/RESPA knowledge helpful.',
     apply_link: 'https://www.westmonroe.com/careers'
@@ -126,7 +126,7 @@ const SEED_LEADS = [
   {
     id: 19, role_title: 'Agile Delivery Manager / Sr. BA', company: 'Capco Consulting',
     via: 'Direct', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: '$120-140K', days_posted: 14, match_score: 97,
+    pay_rate: '$120-140K', date_found: "2026-05-20", match_score: 97,
     contact_name: 'Capco Houston Recruiting', contact_email: '',
     status: 'New', notes: 'George literally did this role at Capco 2021-2024. Strong return candidate.',
     apply_link: 'https://www.capco.com/careers'
@@ -134,7 +134,7 @@ const SEED_LEADS = [
   {
     id: 20, role_title: 'Sr. Project Manager - Finance Transformation', company: 'Opportune LLP',
     via: 'Direct', category: 'PM', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: '$120-145K', days_posted: 21, match_score: 89,
+    pay_rate: '$120-145K', date_found: "2026-05-13", match_score: 89,
     contact_name: 'Opportune LLP HR', contact_email: '',
     status: 'New', notes: 'Houston TX energy/FSI consulting boutique. ERP, PMO, transformation.',
     apply_link: 'https://www.opportune.com/careers'
@@ -142,7 +142,7 @@ const SEED_LEADS = [
   {
     id: 21, role_title: 'Business Technology Product Manager - AI', company: 'Built In Houston (Multiple)',
     via: 'Built In', category: 'PM', type: 'Full-Time', work_model: 'Remote',
-    pay_rate: '$120-150K', days_posted: 7, match_score: 87,
+    pay_rate: '$120-150K', date_found: "2026-05-27", match_score: 87,
     contact_name: 'Built In Houston', contact_email: '',
     status: 'New', notes: 'AI product initiatives, sales platform roadmaps, backlog mgmt.',
     apply_link: 'https://builtin.com/jobs/houston/product'
@@ -150,7 +150,7 @@ const SEED_LEADS = [
   {
     id: 22, role_title: 'Sr. Consultant (PM/BA)', company: 'Pariveda Solutions',
     via: 'Direct', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: '$110-130K', days_posted: 30, match_score: 88,
+    pay_rate: '$110-130K', date_found: "2026-05-04", match_score: 88,
     contact_name: 'Pariveda Dallas/Houston', contact_email: '',
     status: 'New', notes: 'Dallas HQ, Houston presence. Boutique tech consulting, values-driven culture.',
     apply_link: 'https://www.parivedasolutions.com/careers'
@@ -159,7 +159,7 @@ const SEED_LEADS = [
   {
     id: 23, role_title: 'Sr. Business Analyst - Cloud Migration (VA)', company: 'SAIC',
     via: 'Direct - jobs.saic.com', category: 'BA', type: 'Full-Time', work_model: 'Remote',
-    pay_rate: 'TBD', days_posted: 4, match_score: 88,
+    pay_rate: 'TBD', date_found: "2026-05-30", match_score: 88,
     contact_name: 'SAIC Talent Acquisition', contact_email: '',
     status: 'New', notes: '100% remote TX. VA cloud migration. No clearance required.',
     apply_link: 'https://jobs.saic.com/jobs/17678430-sr-business-analyst'
@@ -167,7 +167,7 @@ const SEED_LEADS = [
   {
     id: 24, role_title: 'Business Systems Analyst I/II', company: "Texas Children's Hospital",
     via: "Direct - texaschildrens.org/careers", category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: '$79-105K', days_posted: 7, match_score: 88,
+    pay_rate: '$79-105K', date_found: "2026-05-27", match_score: 88,
     contact_name: "Texas Children's Hospital IT Recruiting", contact_email: '',
     status: 'New', notes: 'Houston TX. Innovative business solutions, process/data flow analysis, cross-functional delivery.',
     apply_link: 'https://jobs.texaschildrens.org/search/searchjobs?keyword=business+analyst'
@@ -175,7 +175,7 @@ const SEED_LEADS = [
   {
     id: 25, role_title: 'Systems Analyst - D365 F&O', company: 'Perry Homes',
     via: 'Direct - careers.perryhomes.com', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: '$90-125K', days_posted: 10, match_score: 85,
+    pay_rate: '$90-125K', date_found: "2026-05-24", match_score: 85,
     contact_name: 'Perry Homes IT Recruiting', contact_email: '',
     status: 'New', notes: 'Houston TX. D365 Finance & Operations, PMO collaboration, requirements gathering.',
     apply_link: 'https://jobs.perryhomes.com'
@@ -184,7 +184,7 @@ const SEED_LEADS = [
   {
     id: 27, role_title: 'Management Consulting - Retail Banking Sr Manager', company: 'Accenture',
     via: 'Direct - accenture.com/careers', category: 'consulting', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: '$150-210K', days_posted: 30, match_score: 91,
+    pay_rate: '$150-210K', date_found: "2026-05-04", match_score: 91,
     contact_name: 'Accenture Experienced Recruiting', contact_email: '',
     status: 'New', notes: 'Houston listed. Retail banking transformation. Capco FSI + JPMC background is direct match.',
     apply_link: 'https://www.accenture.com/us-en/careers/jobdetails?id=R00246570_en'
@@ -192,7 +192,7 @@ const SEED_LEADS = [
   {
     id: 28, role_title: 'Sr Consultant/Manager (Agile/SAFe, Process Analysis)', company: 'Deloitte',
     via: 'Direct - jobs2.deloitte.com', category: 'consulting', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: '$115-170K', days_posted: 7, match_score: 93,
+    pay_rate: '$115-170K', date_found: "2026-05-27", match_score: 93,
     contact_name: 'Deloitte Recruiting - Houston', contact_email: '',
     status: 'New', notes: 'Houston. SAFe Scrum Master cert + process analysis. Prior Deloitte tenure is a strong returnee advantage.',
     apply_link: 'https://jobs2.deloitte.com/us/en/search-results?keywords=agile&location=Houston%2C+Texas'
@@ -201,7 +201,7 @@ const SEED_LEADS = [
   {
     id: 29, role_title: 'Sr. Business Analyst - Universal Services', company: 'Harris County',
     via: 'Direct - governmentjobs.com/careers/harriscountytx', category: 'govt', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: 'Depends on Qualifications', days_posted: 19, match_score: 94,
+    pay_rate: 'Depends on Qualifications', date_found: "2026-05-15", match_score: 94,
     contact_name: 'Harris County HR', contact_email: 'ADACoordinator@bmd.hctx.net',
     status: 'New', notes: 'CLOSES 5/23/2026 — APPLY ASAP. Agile + hybrid, SDLC, cross-functional. Makpar/IRS govt background is a direct match.',
     apply_link: 'https://www.governmentjobs.com/careers/harriscountytx/jobs/5309137-0/sr-business-analyst'
@@ -209,7 +209,7 @@ const SEED_LEADS = [
   {
     id: 30, role_title: 'IT Project Manager (Level I & II)', company: 'Harris County Universal Services',
     via: 'Direct - governmentjobs.com/careers/harriscountytx', category: 'govt', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: 'Depends on Qualifications', days_posted: 35, match_score: 91,
+    pay_rate: 'Depends on Qualifications', date_found: "2026-04-29", match_score: 91,
     contact_name: 'Harris County HR', contact_email: '',
     status: 'New', notes: 'Hiring 2 PMs. Level II: medium-large tech projects, cross-functional teams. JIRA required.',
     apply_link: 'https://www.governmentjobs.com/careers/harriscountytx/jobs/5049206-0/it-project-manager'
@@ -217,7 +217,7 @@ const SEED_LEADS = [
   {
     id: 31, role_title: 'Business Analyst (Multiple Levels)', company: 'Harris County Universal Services',
     via: 'Direct - governmentjobs.com/careers/harriscountytx', category: 'govt', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: 'Depends on Qualifications', days_posted: 30, match_score: 89,
+    pay_rate: 'Depends on Qualifications', date_found: "2026-05-04", match_score: 89,
     contact_name: 'Harris County HR', contact_email: '',
     status: 'New', notes: 'Broad posting for multiple BA levels. Agile CSPO/CBAP cert a plus.',
     apply_link: 'https://www.governmentjobs.com/careers/harriscountytx/jobs/5066840/business-analyst'
@@ -225,7 +225,7 @@ const SEED_LEADS = [
   {
     id: 32, role_title: 'IT Lead - Business Analysis (IT Architect)', company: 'City of Houston - HITS',
     via: 'Direct - governmentjobs.com/careers/houston', category: 'govt', type: 'Full-Time', work_model: 'On-site',
-    pay_rate: 'Pay Grade 29', days_posted: 45, match_score: 88,
+    pay_rate: 'Pay Grade 29', date_found: "2026-04-19", match_score: 88,
     contact_name: 'City of Houston HR', contact_email: '',
     status: 'New', notes: '611 Walker, Houston TX. IT Liaison/BA Lead bridging business + IT. PMO division.',
     apply_link: 'https://www.governmentjobs.com/careers/houston'
@@ -234,7 +234,7 @@ const SEED_LEADS = [
   {
     id: 33, role_title: 'Sr Associate, CFO/F&A Technology Business Analyst', company: 'KPMG',
     via: 'Direct - kpmguscareers.com', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: 'TBD', days_posted: 14, match_score: 93,
+    pay_rate: 'TBD', date_found: "2026-05-20", match_score: 93,
     contact_name: 'KPMG Recruiting', contact_email: '',
     status: 'New', notes: 'Houston TX. Agile, PM skills, accounting/financial reporting BA. CFO advisory practice.',
     apply_link: 'https://www.kpmguscareers.com/jobdetail/?jobId=125697'
@@ -242,7 +242,7 @@ const SEED_LEADS = [
   {
     id: 34, role_title: 'Sr Specialist, ServiceNow HRSD Business Analyst', company: 'KPMG',
     via: 'Direct - kpmguscareers.com', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: 'TBD', days_posted: 21, match_score: 88,
+    pay_rate: 'TBD', date_found: "2026-05-13", match_score: 88,
     contact_name: 'KPMG Recruiting', contact_email: '',
     status: 'New', notes: 'Houston listed. ServiceNow HRSD config, Agile, business analysis tools.',
     apply_link: 'https://www.kpmguscareers.com/jobdetail/?jobId=128082'
@@ -250,7 +250,7 @@ const SEED_LEADS = [
   {
     id: 35, role_title: 'Sr Associate, Business Analyst', company: 'KPMG',
     via: 'Direct - kpmguscareers.com', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: 'TBD', days_posted: 10, match_score: 91,
+    pay_rate: 'TBD', date_found: "2026-05-24", match_score: 91,
     contact_name: 'KPMG Recruiting', contact_email: '',
     status: 'New', notes: 'Houston TX. Core BA advisory role. KPMG Advisory is their fastest growing practice.',
     apply_link: 'https://www.kpmguscareers.com/jobdetail/?jobId=132411'
@@ -258,7 +258,7 @@ const SEED_LEADS = [
   {
     id: 36, role_title: 'Technology Project Manager - GMS Tax', company: 'KPMG',
     via: 'Direct - kpmguscareers.com', category: 'PM', type: 'Full-Time', work_model: 'Hybrid',
-    pay_rate: 'TBD', days_posted: 18, match_score: 87,
+    pay_rate: 'TBD', date_found: "2026-05-16", match_score: 87,
     contact_name: 'KPMG Recruiting', contact_email: '',
     status: 'New', notes: 'Houston TX. Agile/Scrum PM for analytics practice.',
     apply_link: 'https://www.kpmguscareers.com/job-search/'
@@ -266,7 +266,7 @@ const SEED_LEADS = [
   {
     id: 37, role_title: 'KPMG Assignment Select (KAS) - Contract PM/BA', company: 'KPMG',
     via: 'KPMG contractor portal', category: 'consulting', type: 'Contract', work_model: 'Remote',
-    pay_rate: 'Project rate', days_posted: 7, match_score: 90,
+    pay_rate: 'Project rate', date_found: "2026-05-27", match_score: 90,
     contact_name: 'KPMG KAS Recruiting', contact_email: '',
     status: 'New', notes: 'Register at kpmguscareers.com/contractor — project-based work across Advisory, Risk, PM, BA.',
     apply_link: 'https://www.kpmguscareers.com/contractor/'
@@ -275,7 +275,7 @@ const SEED_LEADS = [
   {
     id: 38, role_title: 'EY GigNow - Contract BA/PM/Delivery', company: 'EY Ernst & Young',
     via: 'EY GigNow contractor portal', category: 'consulting', type: 'Contract', work_model: 'Remote',
-    pay_rate: 'Project rate', days_posted: 1, match_score: 92,
+    pay_rate: 'Project rate', date_found: "2026-06-02", match_score: 92,
     contact_name: 'EY GigNow Recruiting', contact_email: '',
     status: 'New', notes: 'Register at app.gignow.com/ey — EY alumni explicitly welcomed. BA, PM, Delivery, Risk all in scope.',
     apply_link: 'https://app.gignow.com/ey/job_postings'
@@ -284,7 +284,7 @@ const SEED_LEADS = [
   {
     id: 40, role_title: 'Project / Program Manager', company: 'Artemis Connection',
     via: 'Artemis Connection', category: 'consulting', type: 'Contract', work_model: 'Remote',
-    pay_rate: '$70-80/hr', days_posted: 6, match_score: 90,
+    pay_rate: '$70-80/hr', date_found: "2026-05-28", match_score: 90,
     contact_name: 'Christy Johnson (Founder)', contact_email: '',
     status: 'New', notes: '12-month engagement, public sector VA client, occasional travel DC/Denver. PMP preferred. McKinsey-pedigree boutique firm. ATS resume prepared.',
     apply_link: 'https://artemis-connection.breezy.hr/'
@@ -292,7 +292,7 @@ const SEED_LEADS = [
   {
     id: 41, role_title: 'Project Manager / Scrum Master', company: 'V3Main Technologies',
     via: 'V3Main', category: 'PM', type: 'Contract', work_model: 'On-site',
-    pay_rate: 'TBD', days_posted: 7, match_score: 93,
+    pay_rate: 'TBD', date_found: "2026-05-27", match_score: 93,
     contact_name: 'V3Main HR', contact_email: 'careers@v3main.com',
     status: 'New', notes: '6-12 month contract, multiple positions. Houston-based. CSM/PMP a plus.',
     apply_link: 'https://www.v3main.com/project-managerscrum-master.html'
@@ -300,7 +300,7 @@ const SEED_LEADS = [
   {
     id: 42, role_title: 'Sr. Business Analyst — Capital Markets Risk Tech', company: 'Insight Global (FSI client)',
     via: 'Insight Global', category: 'BA', type: 'Contract', work_model: 'Remote',
-    pay_rate: 'TBD', days_posted: 10, match_score: 91,
+    pay_rate: 'TBD', date_found: "2026-05-24", match_score: 91,
     contact_name: 'Insight Global Houston', contact_email: '',
     status: 'New', notes: 'Capital Markets BA — agile sprints, regulatory priorities. Strong FSI + Capco/JPMC alignment.',
     apply_link: 'https://jobs.insightglobal.com/find_a_job/?remote=false&miles=False&srch=Business+Analyst'
@@ -308,7 +308,7 @@ const SEED_LEADS = [
   {
     id: 43, role_title: 'Scrum Master / Agile PM — Cybersecurity PMO', company: 'CEDENT (Houston bank client)',
     via: 'CEDENT', category: 'PM', type: 'Contract', work_model: 'Hybrid',
-    pay_rate: 'TBD', days_posted: 5, match_score: 88,
+    pay_rate: 'TBD', date_found: "2026-05-29", match_score: 88,
     contact_name: 'CEDENT Recruiting', contact_email: '',
     status: 'New', notes: 'Scrum Master for Tier-0 security team. Backlog mgmt, sprint ceremonies. CSM required — George has it.',
     apply_link: 'https://theapplicantmanager.com/careers?co=dt'
@@ -316,7 +316,7 @@ const SEED_LEADS = [
   {
     id: 44, role_title: 'IT Business Analyst — Lead Management / AI', company: 'Insight Global (Austin client)',
     via: 'Insight Global', category: 'BA', type: 'Contract', work_model: 'Hybrid',
-    pay_rate: 'TBD', days_posted: 18, match_score: 82,
+    pay_rate: 'TBD', date_found: "2026-05-16", match_score: 82,
     contact_name: 'Insight Global Austin', contact_email: '',
     status: 'New', notes: '5+ yrs BA + PM, Agile SDLC, Salesforce/Eloqua. Gen AI experience required — George has it.',
     apply_link: 'https://jobs.insightglobal.com/find_a_job/?remote=false&miles=False&srch=Business+Analyst'
@@ -324,7 +324,7 @@ const SEED_LEADS = [
   {
     id: 47, role_title: 'Agile Project Manager', company: 'Artemis Connection (2nd role)',
     via: 'Artemis Connection', category: 'PM', type: 'Contract', work_model: 'Remote',
-    pay_rate: '$70-80/hr', days_posted: 6, match_score: 90,
+    pay_rate: '$70-80/hr', date_found: "2026-05-28", match_score: 90,
     contact_name: 'Christy Johnson (Founder)', contact_email: '',
     status: 'New', notes: 'Same firm as id:40 — second open PM engagement. Remote-first. High pay band.',
     apply_link: 'https://artemis-connection.breezy.hr/'
@@ -332,10 +332,108 @@ const SEED_LEADS = [
   {
     id: 49, role_title: 'UAT Test Manager — Lending Platform', company: 'NTT DATA',
     via: 'NTT DATA', category: 'QA', type: 'Contract', work_model: 'Remote',
-    pay_rate: 'TBD', days_posted: 14, match_score: 87,
+    pay_rate: 'TBD', date_found: "2026-05-20", match_score: 87,
     contact_name: 'NTT DATA Recruiting', contact_email: '',
     status: 'New', notes: 'UAT Test Manager for lending/fintech product. George: 20+ yrs QA, managed UAT at JPMC & Deloitte.',
     apply_link: 'https://careers-inc.nttdata.com/go/Project-Manager-Jobs-in-Plano/3364100/'
+  },
+
+  // -- NEW LEADS from Claude live search Jun 3, 2026 -----------------------
+  {
+    id: 101, role_title: 'Sr. Technical Business Analyst (Digital Products)', company: 'Undisclosed Enterprise',
+    via: 'The Judge Group', category: 'BA', type: 'Contract', work_model: 'Hybrid',
+    pay_rate: '$30-40/hr (negotiate up)', date_found: '2026-06-03', match_score: 93,
+    contact_name: 'T. Verma', contact_email: 'tverma@judge.com',
+    status: 'New', notes: '12-month contract. BA + Scrum Master hybrid. Azure DevOps backlog, Agile ceremonies, UAT. AEM preferred. W2 only, local Houston.',
+    apply_link: 'https://www.judge.com/job-seekers/search-jobs/'
+  },
+  {
+    id: 102, role_title: 'Business Analyst II', company: 'Undisclosed Client (Downtown Houston)',
+    via: 'Kforce', category: 'BA', type: 'Contract', work_model: 'Hybrid',
+    pay_rate: '$40-47/hr', date_found: '2026-06-03', match_score: 91,
+    contact_name: 'Cole Withers', contact_email: '',
+    status: 'New', notes: 'Posted today. Mon-Thu onsite, Fri remote. Vendor mgmt, project goals, metrics, budget. Contact Cole directly.',
+    apply_link: 'https://www.kforce.com/find-work/search-jobs/?keyword=business+analyst+houston'
+  },
+  {
+    id: 103, role_title: 'Scrum Master / PM — Data Center to Cloud Migration', company: 'Undisclosed Fortune 100',
+    via: 'Staffing (Remote)', category: 'PM', type: 'Contract', work_model: 'Remote',
+    pay_rate: '~$55-65/hr', date_found: '2026-06-03', match_score: 90,
+    contact_name: '', contact_email: '',
+    status: 'New', notes: 'Long-term remote contract. Leads cross-functional teams through cloud migration (Rehost/Re-platform/Rewrite). Strong JPMC cloud delivery match.',
+    apply_link: 'https://www.dice.com/jobs/q-scrum+master+cloud+migration-l-remote-jobs'
+  },
+  {
+    id: 104, role_title: 'Scrum Master', company: 'Undisclosed Client (Downtown Houston)',
+    via: 'Direct', category: 'PM', type: 'Contract-to-Hire', work_model: 'On-site',
+    pay_rate: '$47-63/hr', date_found: '2026-06-03', match_score: 88,
+    contact_name: '', contact_email: '',
+    status: 'New', notes: 'Contract-to-hire. 4 days/week onsite downtown Houston. USC/GC only. CSM required — George qualifies. Sprint ceremonies, OKRs, backlog.',
+    apply_link: 'https://jobtoday.com/us/jobs-scrum-master/tx_houston'
+  },
+  {
+    id: 105, role_title: 'Senior Associate, Technical Delivery Project Manager', company: 'PwC',
+    via: 'Direct', category: 'Consulting', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: '$85-132K', date_found: '2026-06-03', match_score: 94,
+    contact_name: 'PwC Experienced Hiring', contact_email: '',
+    status: 'New', notes: 'Houston + multi-location. Software and product innovation delivery. Deloitte/Capco background is direct match for PwC Senior Associate tier.',
+    apply_link: 'https://jobs.us.pwc.com/job/denver/senior-associate-technical-delivery-project-manager/932/94266588832'
+  },
+  {
+    id: 106, role_title: 'Application Management Specialist — Facilities Mgmt & Public Safety', company: 'Deloitte',
+    via: 'Direct', category: 'Consulting', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: '$110-140K', date_found: '2026-06-03', match_score: 95,
+    contact_name: 'Deloitte Experienced Hiring', contact_email: '',
+    status: 'New', notes: 'Posted May 29. Houston + 30 locations. Govt/public sector delivery. Deloitte returnee advantage. Makpar/IRS federal background is key differentiator.',
+    apply_link: 'https://jobsus.deloitte.com/locations/houston-tx/jobs/'
+  },
+  {
+    id: 107, role_title: 'Managed Services — Oracle Functional Test Lead, Sr Associate', company: 'PwC',
+    via: 'Direct', category: 'QA', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: '$84-202K', date_found: '2026-06-03', match_score: 89,
+    contact_name: 'PwC Experienced Hiring', contact_email: '',
+    status: 'New', notes: 'Houston + 45 locations. QA leadership inside PwC Managed Services. Alliance Global/Deloitte Testing CoE background maps directly.',
+    apply_link: 'https://jobs.us.pwc.com'
+  },
+  {
+    id: 108, role_title: 'Consulting, Project Delivery Specialist', company: 'Deloitte',
+    via: 'Direct', category: 'Consulting', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: '$110-130K', date_found: '2026-06-03', match_score: 92,
+    contact_name: 'Deloitte Experienced Hiring', contact_email: '',
+    status: 'New', notes: 'Austin TX + travel. Testing and implementation services across FSI, healthcare, state/local govt. Exact overlap with Deloitte CoE and IRS work.',
+    apply_link: 'https://jobsus.deloitte.com'
+  },
+  {
+    id: 109, role_title: 'Technology Risk Investigations — Senior Associate', company: 'JP Morgan Chase',
+    via: 'Direct', category: 'BA', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: '$110-130K', date_found: '2026-06-03', match_score: 91,
+    contact_name: 'JPMC Talent Acquisition', contact_email: '',
+    status: 'New', notes: 'Posted Feb 4. Houston + 2 locations. Risk and technology oversight. JPMC returnee advantage — George served as Agility Lead/PM 2018-19.',
+    apply_link: 'https://jpmc.fa.oraclecloud.com'
+  },
+  {
+    id: 110, role_title: 'Sr. Associate, Regulatory Change Management', company: 'Coinbase',
+    via: 'Direct', category: 'BA', type: 'Full-Time', work_model: 'Remote',
+    pay_rate: 'Competitive', date_found: '2026-06-03', match_score: 86,
+    contact_name: 'Coinbase Recruiting', contact_email: '',
+    status: 'New', notes: 'Houston / Remote. Regulatory change management — direct map to Capco MRA controls and $10M+ regulatory risk mitigation work.',
+    apply_link: 'https://www.coinbase.com/careers'
+  },
+  {
+    id: 111, role_title: 'Business Analyst / Product Analyst (Federal)', company: 'Deloitte',
+    via: 'Direct', category: 'Consulting', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: '$110-130K', date_found: '2026-06-03', match_score: 93,
+    contact_name: 'Deloitte Experienced Hiring', contact_email: '',
+    status: 'New', notes: 'Recruiting ends 6/29/2026. Federal contract BA/advisor role. Houston + multi-location. Makpar/IRS eAuthentication federal work is exact credential targeted.',
+    apply_link: 'https://jobsus.deloitte.com/locations/houston-tx/jobs/'
+  },
+  {
+    id: 112, role_title: 'Business Application Consulting — Program Risk & Quality Director', company: 'PwC',
+    via: 'Direct', category: 'Consulting', type: 'Full-Time', work_model: 'Hybrid',
+    pay_rate: '$150-200K', date_found: '2026-06-03', match_score: 91,
+    contact_name: 'PwC Experienced Hiring', contact_email: '',
+    status: 'New', notes: 'Posted Jun 12. Houston + 14 locations. QA governance at Director level. Deloitte Testing CoE + Capco PMO delivery is exact pedigree targeted.',
+    apply_link: 'https://jobs.us.pwc.com'
   },
   // id:45 Discover Financial REMOVED — apply link was a generic Indeed search
   // id:46 Invesco REMOVED — apply link was a generic Indeed search
@@ -356,6 +454,12 @@ function scoreColor(s) {
   return s >= 90 ? 'var(--success)' : s >= 80 ? 'var(--warn)' : 'var(--text3)'
 }
 
+function calcAge(lead) {
+  if (!lead.date_found) return 0
+  const ms = Date.now() - new Date(lead.date_found).getTime()
+  return Math.max(0, Math.floor(ms / 86400000))
+}
+
 export default function LeadsPage({ onApplicationLogged, agentLeads = [], initialCompanyFilter = '', onClearCompanyFilter, onNewRolePattern }) {
   const [leads, setLeads] = useState(SEED_LEADS)
   const [search, setSearch] = useState(initialCompanyFilter)
@@ -371,7 +475,7 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
   const [showAddLead, setShowAddLead] = useState(false)
   const [newLead, setNewLead] = useState({
     role_title: '', company: '', work_model: 'Hybrid', type: 'Full-Time',
-    pay_rate: '', days_posted: 1, match_score: 85, category: 'BA',
+    pay_rate: '', date_found: new Date().toISOString().slice(0,10), match_score: 85, category: 'BA',
     contact_name: '', contact_email: '', apply_link: '', notes: '',
     status: 'New', via: 'Manual entry'
   })
@@ -386,7 +490,7 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
     setShowAddLead(false)
     setNewLead({
       role_title: '', company: '', work_model: 'Hybrid', type: 'Full-Time',
-      pay_rate: '', days_posted: 1, match_score: 85, category: 'BA',
+      pay_rate: '', date_found: new Date().toISOString().slice(0,10), match_score: 85, category: 'BA',
       contact_name: '', contact_email: '', apply_link: '', notes: '',
       status: 'New', via: 'Manual entry'
     })
@@ -560,7 +664,7 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
                 ['company', 'Company', 100],
                 ['type', 'Type', 80],
                 ['work_model', 'Location', 75],
-                ['days_posted', 'Age', 44],
+                ['date_found', 'Age', 44],
                 ['match_score', 'Match', 76],
                 ['contact_name', 'Contact', 110],
                 [null, 'Status', 88],
@@ -609,9 +713,9 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
                 </td>
                 <td style={{
                   fontFamily: 'var(--font-mono)', fontSize: 11,
-                  color: l.days_posted <= 7 ? 'var(--success)' : l.days_posted > 30 ? 'var(--warn)' : 'var(--text2)'
+                  color: calcAge(l) <= 7 ? 'var(--success)' : calcAge(l) > 90 ? 'var(--warn)' : 'var(--text2)'
                 }}>
-                  {l.days_posted}d
+                  {calcAge(l)}d
                 </td>
                 <td>
                   <div className="score-bar">
@@ -678,7 +782,7 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
               </div>
               <div className="field"><label>Pay rate</label><input type="text" placeholder="e.g. $60-70/hr or $110K" value={newLead.pay_rate} onChange={e => fl('pay_rate', e.target.value)} /></div>
               <div className="field"><label>Match score (0-100)</label><input type="number" min="0" max="100" value={newLead.match_score} onChange={e => fl('match_score', parseInt(e.target.value) || 80)} /></div>
-              <div className="field"><label>Days posted</label><input type="number" min="0" value={newLead.days_posted} onChange={e => fl('days_posted', parseInt(e.target.value) || 1)} /></div>
+              <div className="field"><label>Date found</label><input type="date" value={newLead.date_found} onChange={e => fl('date_found', e.target.value)} /></div>
             </div>
             <div style={{ borderTop: '1px solid var(--border)', margin: '12px 0', paddingTop: 12 }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.06em' }}>Contact</div>
