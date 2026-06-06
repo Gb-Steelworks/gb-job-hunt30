@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react'
 import { getAgentRun, setAgentRun } from '../store/agentStore.js'
 import { Bot, Clock, Zap, Loader, AlertCircle } from 'lucide-react'
 
-const DEADLINE = new Date('2026-06-10') // extended by 7 days
+const DEADLINE = new Date('2026-06-16') // extended by 7 days
 const DAYS_LEFT = Math.max(0, Math.ceil((DEADLINE - new Date()) / (1000 * 60 * 60 * 24)))
 
 const GEORGE_PROFILE = `Candidate: George Brooks, Houston TX
