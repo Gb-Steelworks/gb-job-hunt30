@@ -1,5 +1,6 @@
-//  App.jsx — drop-in replacement
-// Adds: hamburger menu button on mobile, overlay dismiss, nav closes on page select
+// App.jsx — fixed
+// Adds shared leads + applications state so all pages stay in sync
+// Fixes: View All button, agent leads persisting, application counts, deadline
 
 import { useState } from 'react'
 import DashboardPage from './pages/DashboardPage'
@@ -11,40 +12,111 @@ import AgentsPage from './pages/AgentsPage'
 import ResumeVaultPage from './pages/ResumeVaultPage'
 
 const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', icon: '⬛' },
-  { id: 'leads', label: 'Job Leads', icon: '🔍' },
+  { id: 'dashboard',    label: 'Dashboard',    icon: '⬛' },
+  { id: 'leads',        label: 'Job Leads',    icon: '🔍' },
   { id: 'applications', label: 'Applications', icon: '📋' },
-  { id: 'companies', label: 'Companies', icon: '🏢' },
-  { id: 'linkedin', label: 'LinkedIn', icon: '🔗' },
-  { id: 'agents', label: 'Agents', icon: '🤖' },
-  { id: 'vault', label: 'Resume Vault', icon: '📁' },
+  { id: 'companies',    label: 'Companies',    icon: '🏢' },
+  { id: 'linkedin',     label: 'LinkedIn',     icon: '🔗' },
+  { id: 'agents',       label: 'Agents',       icon: '🤖' },
+  { id: 'vault',        label: 'Resume Vault', icon: '📁' },
 ]
 
-const PAGE_MAP = {
-  dashboard: DashboardPage,
-  leads: LeadsPage,
-  applications: ApplicationsPage,
-  companies: CompaniesPage,
-  linkedin: LinkedInPage,
-  agents: AgentsPage,
-  vault: ResumeVaultPage,
-}
-
 export default function App() {
-  const [page, setPage] = useState('dashboard')
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [page,         setPage]         = useState('dashboard')
+  const [menuOpen,     setMenuOpen]     = useState(false)
+  // ── Shared state ────────────────────────────────────────────────────────────
+  const [agentLeads,   setAgentLeads]   = useState([])   // leads found by agents
+  const [applications, setApplications] = useState([])   // logged applications
+  const [extraPatterns,setExtraPatterns]= useState([])   // role patterns from + Add Lead
 
-  const PageComponent = PAGE_MAP[page] || DashboardPage
+  // Called by AgentsPage when a run completes — merges new leads into agentLeads
+  const handleLeadsFound = (newLeads) => {
+    setAgentLeads(prev => {
+      const existingIds = new Set(prev.map(l => l.id))
+      const deduped = newLeads.filter(l => !existingIds.has(l.id))
+      return [...prev, ...deduped]
+    })
+  }
+
+  // Called by LeadsPage/RoleActionPanel when user logs an application
+  const handleApplicationLogged = (appData) => {
+    setApplications(prev => {
+      const exists = prev.find(a => a.id === appData.id)
+      if (exists) return prev.map(a => a.id === appData.id ? { ...a, ...appData } : a)
+      return [...prev, appData]
+    })
+  }
+
+  // Called by ApplicationsPage when status advances
+  const handleAdvanceStage = (id, newStatus) => {
+    setApplications(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a))
+  }
+
+  // Called by LeadsPage + Add Lead modal to feed agent context
+  const handleNewRolePattern = (pattern) => {
+    setExtraPatterns(prev => [...prev, pattern])
+  }
 
   function navigate(id) {
     setPage(id)
     setMenuOpen(false)
   }
 
+  // ── Render correct page with all its props ──────────────────────────────────
+  const renderPage = () => {
+    switch (page) {
+      case 'dashboard':
+        return (
+          <DashboardPage
+            onNavigate={navigate}
+            leads={agentLeads}
+            applications={applications}
+          />
+        )
+      case 'leads':
+        return (
+          <LeadsPage
+            onApplicationLogged={handleApplicationLogged}
+            agentLeads={agentLeads}
+            onNewRolePattern={handleNewRolePattern}
+          />
+        )
+      case 'applications':
+        return (
+          <ApplicationsPage
+            applications={applications}
+            onAdvanceStage={handleAdvanceStage}
+            onSetStatus={handleAdvanceStage}
+          />
+        )
+      case 'companies':
+        return <CompaniesPage onNavigate={navigate} />
+      case 'linkedin':
+        return <LinkedInPage />
+      case 'agents':
+        return (
+          <AgentsPage
+            onLeadsFound={handleLeadsFound}
+            extraPatterns={extraPatterns}
+          />
+        )
+      case 'vault':
+        return <ResumeVaultPage />
+      default:
+        return (
+          <DashboardPage
+            onNavigate={navigate}
+            leads={agentLeads}
+            applications={applications}
+          />
+        )
+    }
+  }
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
 
-      {/* Overlay — mobile only, closes menu when tapped */}
+      {/* Overlay — mobile only */}
       {menuOpen && (
         <div
           onClick={() => setMenuOpen(false)}
@@ -115,7 +187,7 @@ export default function App() {
         </div>
 
         <div style={{ padding: '1.5rem' }}>
-          <PageComponent setPage={navigate} />
+          {renderPage()}
         </div>
       </main>
 
