@@ -473,6 +473,7 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
   const [checking, setChecking] = useState(false)
   const [checkResults, setCheckResults] = useState({})
   const [showAddLead, setShowAddLead] = useState(false)
+  const [showDeadSection, setShowDeadSection] = useState(true)
   const [newLead, setNewLead] = useState({
     role_title: '', company: '', work_model: 'Hybrid', type: 'Full-Time',
     pay_rate: '', date_found: new Date().toISOString().slice(0,10), match_score: 85, category: 'BA',
@@ -550,29 +551,36 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
     setActiveRole(null)
   }
 
-  const filtered = leads
-    .filter(l => {
-      const q = search.toLowerCase()
-      if (q && !l.role_title.toLowerCase().includes(q) && !l.company.toLowerCase().includes(q)) return false
-      if (fType && l.type !== fType) return false
-      if (fModel) {
-        if (fModel === 'Dallas' || fModel === 'Austin') {
-          const loc = fModel.toLowerCase()
-          if (!((l.notes || '').toLowerCase().includes(loc) || (l.company || '').toLowerCase().includes(loc) || (l.via || '').toLowerCase().includes(loc))) return false
-        } else {
-          if (l.work_model !== fModel) return false
-        }
+  const baseFilter = (l) => {
+    const q = search.toLowerCase()
+    if (q && !l.role_title.toLowerCase().includes(q) && !l.company.toLowerCase().includes(q)) return false
+    if (fType && l.type !== fType) return false
+    if (fModel) {
+      if (fModel === 'Dallas' || fModel === 'Austin') {
+        const loc = fModel.toLowerCase()
+        if (!((l.notes || '').toLowerCase().includes(loc) || (l.company || '').toLowerCase().includes(loc) || (l.via || '').toLowerCase().includes(loc))) return false
+      } else {
+        if (l.work_model !== fModel) return false
       }
-      if (fRole && l.category !== fRole) return false
-      if (fStatus && l.status !== fStatus) return false
-      return true
-    })
-    .sort((a, b) => {
-      const av = a[sortCol] ?? ''
-      const bv = b[sortCol] ?? ''
-      const mul = sortDir === 'desc' ? -1 : 1
-      return av < bv ? mul : av > bv ? -mul : 0
-    })
+    }
+    if (fRole && l.category !== fRole) return false
+    if (fStatus && l.status !== fStatus) return false
+    return true
+  }
+
+  const sortFn = (a, b) => {
+    const av = a[sortCol] ?? ''
+    const bv = b[sortCol] ?? ''
+    const mul = sortDir === 'desc' ? -1 : 1
+    return av < bv ? mul : av > bv ? -mul : 0
+  }
+
+  // After Check Links runs, quarantine dead links into a separate section below the table
+  const hasCheckResults = Object.keys(checkResults).length > 0
+  const filtered     = leads.filter(l => baseFilter(l) && checkResults[l.id] !== 'dead').sort(sortFn)
+  const deadFiltered = hasCheckResults
+    ? leads.filter(l => baseFilter(l) && checkResults[l.id] === 'dead').sort(sortFn)
+    : []
 
   const newCount = leads.filter(l => l.status === 'New').length
   const remoteCount = leads.filter(l => l.work_model === 'Remote').length
@@ -751,6 +759,133 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
           </tbody>
         </table>
       </div>
+
+      {/* ── Dead Links Quarantine Section ─────────────────────────────────────── */}
+      {deadFiltered.length > 0 && (
+        <div style={{ marginTop: 24 }}>
+          <button
+            onClick={() => setShowDeadSection(s => !s)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+              padding: '10px 14px',
+              background: 'rgba(248,113,113,0.06)',
+              border: '1px solid rgba(248,113,113,0.25)',
+              borderRadius: showDeadSection ? '8px 8px 0 0' : '8px',
+              cursor: 'pointer', color: 'var(--danger)', fontWeight: 600, fontSize: 12,
+              fontFamily: 'var(--font)',
+            }}
+          >
+            <span style={{ fontSize: 14 }}>⚠️</span>
+            <span>Dead / Filled Postings ({deadFiltered.length})</span>
+            <span style={{ marginLeft: 'auto', fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)', fontWeight: 400 }}>
+              Links returned 404 or 410 · Verify before removing · click to {showDeadSection ? 'collapse' : 'expand'}
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>{showDeadSection ? '▲' : '▼'}</span>
+          </button>
+
+          {showDeadSection && (
+            <div style={{
+              border: '1px solid rgba(248,113,113,0.25)', borderTop: 'none',
+              borderRadius: '0 0 8px 8px', overflow: 'hidden',
+            }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', opacity: 0.7 }}>
+                <thead>
+                  <tr style={{ background: 'rgba(248,113,113,0.06)' }}>
+                    {[['Role', 170], ['Company', 100], ['Type', 80], ['Location', 75], ['Age', 44], ['Match', 76], ['Contact', 110], ['Status', 88], ['Act.', 78]].map(([label, width]) => (
+                      <th key={label} style={{
+                        width, padding: '7px 10px', textAlign: 'left',
+                        fontSize: 10, fontWeight: 600, color: 'var(--danger)',
+                        fontFamily: 'var(--font-mono)', borderBottom: '1px solid rgba(248,113,113,0.2)',
+                        ...(label === 'Act.' ? { position: 'sticky', right: 0, background: 'rgba(30,10,10,0.95)', zIndex: 2 } : {})
+                      }}>{label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {deadFiltered.map(l => (
+                    <tr key={l.id} style={{ borderBottom: '1px solid rgba(248,113,113,0.1)' }}>
+                      <td style={{ padding: '7px 10px', fontWeight: 500, color: 'var(--text3)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ textDecoration: 'line-through' }}>{l.role_title}</span>
+                          <span style={{ fontSize: 9, color: 'var(--danger)', fontWeight: 700 }}>⚠️ DEAD</span>
+                        </div>
+                        {l.notes && (
+                          <div style={{ fontSize: 10, color: 'var(--text3)', fontStyle: 'italic', marginTop: 2 }}>{l.notes}</div>
+                        )}
+                      </td>
+                      <td style={{ padding: '7px 10px', color: 'var(--text3)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{l.company}</td>
+                      <td style={{ padding: '7px 10px' }}>
+                        <span className={`pill pill-${l.type === 'Contract' ? 'contract' : 'ft'}`} style={{ fontSize: 9, opacity: 0.6 }}>
+                          {l.type === 'Contract-to-Hire' ? 'CTH' : l.type}
+                        </span>
+                      </td>
+                      <td style={{ padding: '7px 10px' }}>
+                        <span style={{ fontSize: 9, color: 'var(--text3)' }}>{l.work_model}</span>
+                      </td>
+                      <td style={{ padding: '7px 10px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text3)' }}>
+                        {calcAge(l)}d
+                      </td>
+                      <td style={{ padding: '7px 10px' }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text3)' }}>{l.match_score}</span>
+                      </td>
+                      <td style={{ padding: '7px 10px', fontSize: 11, color: 'var(--text3)' }}>
+                        {l.contact_name || '—'}
+                      </td>
+                      <td style={{ padding: '7px 10px' }}>
+                        <span style={{ fontSize: 10, color: 'var(--text3)' }}>{l.status}</span>
+                      </td>
+                      <td style={{ padding: '7px 10px', position: 'sticky', right: 0, background: 'rgba(20,5,5,0.95)', zIndex: 1 }}>
+                        <div style={{ display: 'flex', gap: 3 }}>
+                          <button
+                            onClick={() => setLeads(prev => prev.filter(x => x.id !== l.id))}
+                            style={{
+                              padding: '3px 8px', fontSize: 10, fontWeight: 600,
+                              background: 'rgba(248,113,113,0.12)',
+                              border: '1px solid rgba(248,113,113,0.3)',
+                              borderRadius: 'var(--radius)', color: 'var(--danger)',
+                              cursor: 'pointer', fontFamily: 'var(--font)',
+                            }}
+                          >
+                            Remove
+                          </button>
+                          <a href={l.apply_link} target="_blank" rel="noopener noreferrer">
+                            <button className="btn btn-sm" title="Verify link manually">
+                              <ExternalLink size={10} />
+                            </button>
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{
+                padding: '8px 14px', background: 'rgba(248,113,113,0.04)',
+                borderTop: '1px solid rgba(248,113,113,0.15)',
+                fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)',
+                display: 'flex', gap: 16, alignItems: 'center',
+              }}>
+                <span>⚠️ = 404 or 410 HTTP response</span>
+                <span>· Verify manually before removing</span>
+                <button
+                  onClick={() => {
+                    const deadIds = new Set(deadFiltered.map(l => l.id))
+                    setLeads(prev => prev.filter(l => !deadIds.has(l.id)))
+                  }}
+                  style={{
+                    marginLeft: 'auto', padding: '3px 10px', fontSize: 10,
+                    background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)',
+                    borderRadius: 'var(--radius)', color: 'var(--danger)',
+                    cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600,
+                  }}
+                >
+                  Remove all {deadFiltered.length} dead leads
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {showAddLead && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
