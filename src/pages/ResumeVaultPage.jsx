@@ -6,6 +6,21 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Upload, Download, RefreshCw, Loader, CheckCircle } from 'lucide-react'
 
+//New code - bug fix
+
+// ─── suggestVariant — exported for RoleActionPanel ────────────────────────
+export function suggestVariant(roleText) {
+  const t = (roleText || '').toLowerCase()
+  if (t.includes('qa') || t.includes('test') || t.includes('quality')) return 'qa'
+  if (t.includes('fsi') || t.includes('banking') || t.includes('financial')) return 'fsi'
+  if (t.includes('product') || t.includes('owner') || t.includes('scrum')) return 'pm'
+  if (t.includes('consult') || t.includes('deloitte') || t.includes('capco') ||
+      t.includes('kpmg') || t.includes('ey') || t.includes('accenture') || t.includes('slalom')) return 'consulting'
+  if (t.includes('delivery') || t.includes('program') || t.includes('pmo') || t.includes('rte')) return 'delivery'
+  if (t.includes('ba') || t.includes('analyst') || t.includes('business')) return 'consulting'
+  return 'consulting'
+}
+
 // ─── suggestVariant — exported for RoleActionPanel ────────────────────────────
 export function suggestVariant(roleText) {
   const t = (roleText || '').toLowerCase()
