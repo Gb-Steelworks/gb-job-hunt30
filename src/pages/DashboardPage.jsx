@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Zap, ArrowRight, ExternalLink } from 'lucide-react'
 
-const DEADLINE = new Date('2026-06-10')
+const DEADLINE = new Date('2026-06-16')
 const DAYS_LEFT = Math.max(0, Math.ceil((DEADLINE - new Date()) / (1000 * 60 * 60 * 24)))
 
 const DEFAULT_ACTIONS = [
@@ -57,6 +57,9 @@ const STATIC_LEADS = [
   { role_title: 'CFO/F&A Technology BA',           company: 'KPMG',          match_score: 93, status: 'New', days_posted: 11, apply_link: 'https://www.kpmguscareers.com/job-search/' },
 ]
 
+// SEED_LEADS count — keep in sync with LeadsPage.jsx SEED_LEADS array length
+const SEED_LEADS_COUNT = 51
+
 export default function DashboardPage({ onNavigate, leads = [], applications = [] }) {
   const [checked, setChecked] = useState({})
 
@@ -70,12 +73,15 @@ export default function DashboardPage({ onNavigate, leads = [], applications = [
   const inProgress = applications.filter(a => !['Applied', 'Closed'].includes(a.status)).length
   const interviews = applications.filter(a => ['Interview Pending', 'Interviewed'].includes(a.status)).length
 
+  // Total leads = seed leads + agent-found leads
+  const totalLeads = SEED_LEADS_COUNT + leads.length
+
   const liveStats = [
-    { label: 'Leads found', val: leads.length || 51, delta: 'From agent runs', cls: 'accent' },
-    { label: 'Applied',     val: applied,             delta: '—',              cls: '' },
-    { label: 'In progress', val: inProgress,          delta: '—',              cls: '' },
-    { label: 'Interviews',  val: interviews,          delta: '—',              cls: '' },
-    { label: 'Days left',   val: DAYS_LEFT,           delta: 'Until June 10',  cls: 'warn' },
+    { label: 'Leads found', val: totalLeads,  delta: 'Seed + agent runs', cls: 'accent' },
+    { label: 'Applied',     val: applied,     delta: '—',                 cls: '' },
+    { label: 'In progress', val: inProgress,  delta: '—',                 cls: '' },
+    { label: 'Interviews',  val: interviews,  delta: '—',                 cls: '' },
+    { label: 'Days left',   val: DAYS_LEFT,   delta: 'Until June 16',     cls: 'warn' },
   ]
 
   const uncheckedCount = DEFAULT_ACTIONS.filter((_, i) => !checked[i]).length
@@ -89,7 +95,7 @@ export default function DashboardPage({ onNavigate, leads = [], applications = [
     <div className="page">
       <div className="page-header">
         <div className="page-title">Command Center</div>
-        <div className="page-sub">Target: Contract or FT by June 10 · QA · BA · PM · Agile · Product Manager</div>
+        <div className="page-sub">Target: Contract or FT by June 16 · QA · BA · PM · Agile · Product Manager</div>
       </div>
 
       <div className="stats-row">
@@ -108,7 +114,8 @@ export default function DashboardPage({ onNavigate, leads = [], applications = [
         <div className="card">
           <div className="card-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             Top leads
-            <button className="btn btn-sm btn-accent" onClick={() => onNavigate('leads')}>
+            {/* FIX: was onNavigate — now correctly wired */}
+            <button className="btn btn-sm btn-accent" onClick={() => onNavigate?.('leads')}>
               View all <ArrowRight size={11} />
             </button>
           </div>
@@ -174,7 +181,6 @@ export default function DashboardPage({ onNavigate, leads = [], applications = [
                 transition: 'opacity .2s',
               }}
             >
-              {/* Checkbox */}
               <div style={{
                 marginTop: 2, width: 15, height: 15, borderRadius: 4, flexShrink: 0,
                 border: `1.5px solid ${checked[i] ? 'var(--success)' : a.urgent ? 'var(--warn)' : 'var(--border2)'}`,
@@ -197,7 +203,6 @@ export default function DashboardPage({ onNavigate, leads = [], applications = [
                   {a.detail}
                 </div>
               </div>
-              {/* External link button */}
               {a.link && (
                 <button
                   onClick={(e) => openLink(e, a.link)}
@@ -222,10 +227,18 @@ export default function DashboardPage({ onNavigate, leads = [], applications = [
         <div className="card-title">Agent run log</div>
         <div className="run-row">
           <div className="run-dot run-ok" />
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text3)' }}>May 21, 2026 · Last run</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text3)' }}>Jun 3, 2026 · Last run</span>
           <span style={{ fontSize: 12, color: 'var(--text)' }}>Agent A1 + A2 — leads in table</span>
-          <span className="pill pill-new" style={{ marginLeft: 'auto' }}>{leads.length || 51} leads</span>
+          <span className="pill pill-new" style={{ marginLeft: 'auto' }}>{totalLeads} leads</span>
         </div>
+        {leads.length > 0 && (
+          <div className="run-row" style={{ marginTop: 4 }}>
+            <div className="run-dot run-ok" />
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--accent)' }}>
+              +{leads.length} new leads from this session's agent runs
+            </span>
+          </div>
+        )}
         <div style={{ padding: '8px 0', fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>
           Next run: click Agents → Run A1 or A2 · or set up Make.com scheduler (Option B)
         </div>
