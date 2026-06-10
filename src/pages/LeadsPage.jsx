@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react'
 import { ExternalLink, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import RoleActionPanel from '../components/RoleActionPanel.jsx'
+import { loadLeadStatuses, saveLeadStatus } from '../store/appStore.js'
 
 const SEED_LEADS = [
   // -- AGENT 1: Recruiters + Job Boards --------------------------------------
@@ -19,7 +20,7 @@ const SEED_LEADS = [
     id: 3, role_title: 'Sr. BA - Customer Comms', company: 'TEKsystems (FSI)',
     via: 'TEKsystems', category: 'BA', type: 'Contract', work_model: 'Remote',
     pay_rate: 'TBD', date_found: "2026-05-27", match_score: 91,
-    contact_name: 'Kape Kelly', contact_email: 'PatrKelly@teksystems.com',
+    contact_name: null, contact_email: null,  // hallucinated — scrubbed
     status: 'New', notes: '',
     apply_link: 'https://careers.teksystems.com/us/en'
   },
@@ -461,7 +462,10 @@ function calcAge(lead) {
 }
 
 export default function LeadsPage({ onApplicationLogged, agentLeads = [], initialCompanyFilter = '', onClearCompanyFilter, onNewRolePattern }) {
-  const [leads, setLeads] = useState(SEED_LEADS)
+  const [leads, setLeads] = useState(() => {
+    const saved = loadLeadStatuses()
+    return SEED_LEADS.map(l => saved[l.id] ? { ...l, status: saved[l.id] } : l)
+  })
   const [search, setSearch] = useState(initialCompanyFilter)
   const [fType, setFType] = useState('')
   const [fModel, setFModel] = useState('')
@@ -534,7 +538,11 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
     if (!agentLeads.length) return
     setLeads(prev => {
       const ids = new Set(prev.map(l => l.id))
-      return [...prev, ...agentLeads.filter(l => !ids.has(l.id))]
+      const saved = loadLeadStatuses()
+      const newLeads = agentLeads
+        .filter(l => !ids.has(l.id))
+        .map(l => saved[l.id] ? { ...l, status: saved[l.id] } : l)
+      return [...prev, ...newLeads]
     })
   }, [agentLeads])
 
@@ -543,7 +551,10 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
     else { setSortCol(col); setSortDir('desc') }
   }
 
-  const updateStatus = (id, val) => setLeads(leads.map(l => l.id === id ? { ...l, status: val } : l))
+  const updateStatus = (id, val) => {
+    saveLeadStatus(id, val)
+    setLeads(prev => prev.map(l => l.id === id ? { ...l, status: val } : l))
+  }
 
   const handleApplied = (appData) => {
     setLeads(prev => prev.map(l => l.id === appData.id ? { ...l, status: 'Applied' } : l))

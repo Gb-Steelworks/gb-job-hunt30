@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { loadPriorityChecks, savePriorityChecks, saveLeadStatus } from '../store/appStore.js'
 import { Zap, ArrowRight, ExternalLink } from 'lucide-react'
 
 const DEADLINE = new Date('2026-06-16')
@@ -58,12 +59,16 @@ const STATIC_LEADS = [
 ]
 
 // SEED_LEADS count — keep in sync with LeadsPage.jsx SEED_LEADS array length
-const SEED_LEADS_COUNT = 51
+const SEED_LEADS_COUNT = 52
 
-export default function DashboardPage({ onNavigate, leads = [], applications = [] }) {
-  const [checked, setChecked] = useState({})
+export default function DashboardPage({ onNavigate, leads = [], applications = [], leadStatuses = {}, onLeadStatusChange }) {
+  const [checked, setChecked] = useState(() => loadPriorityChecks())
 
-  const toggle = (i) => setChecked(prev => ({ ...prev, [i]: !prev[i] }))
+  const toggle = (i) => setChecked(prev => {
+    const next = { ...prev, [i]: !prev[i] }
+    savePriorityChecks(next)
+    return next
+  })
 
   const topLeads = leads.length > 0
     ? [...leads].sort((a, b) => (b.match_score || 0) - (a.match_score || 0)).slice(0, 5)
@@ -119,41 +124,79 @@ export default function DashboardPage({ onNavigate, leads = [], applications = [
               View all <ArrowRight size={11} />
             </button>
           </div>
-          {topLeads.map((r, i) => (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '8px 0',
-              borderBottom: i < topLeads.length - 1 ? '1px solid var(--border)' : 'none',
-            }}>
-              <div style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {r.role_title}
+          {topLeads.map((r, i) => {
+            // Use shared leadStatuses map (persisted) — falls back to lead's own status
+            const st = (r.id && leadStatuses[r.id]) || r.status || 'New'
+            const stColor =
+              st === 'Applied'           ? 'var(--accent)'
+              : st === 'Interview Pending'
+                || st === 'Interviewed' ? 'var(--accent2)'
+              : st === 'Offer'          ? 'var(--success)'
+              : st === 'Closed'
+                || st === 'Passed'      ? 'var(--text3)'
+              : 'var(--warn)'
+
+            const handleStatusChange = (e) => {
+              e.stopPropagation()
+              const newSt = e.target.value
+              if (r.id) {
+                saveLeadStatus(r.id, newSt)
+                onLeadStatusChange?.(r.id, newSt)
+              }
+            }
+
+            return (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 0',
+                borderBottom: i < topLeads.length - 1 ? '1px solid var(--border)' : 'none',
+              }}>
+                <div style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.role_title}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>
+                    {r.company}{r.days_posted != null ? ` · ${r.days_posted}d ago` : ''}
+                  </div>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>
-                  {r.company}{r.days_posted != null ? ` · ${r.days_posted}d ago` : ''}
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                <span className="pill pill-new">{r.status || 'New'}</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>
-                  {r.match_score}%
-                </span>
-                {(r.apply_link || r.applyLink) && (
-                  <button
-                    onClick={(e) => openLink(e, r.apply_link || r.applyLink)}
-                    title="Apply"
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  {/* Inline status selector — syncs with Leads page via shared leadStatuses */}
+                  <select
+                    value={st}
+                    onChange={handleStatusChange}
+                    onClick={e => e.stopPropagation()}
+                    title="Update status — syncs with Leads page"
                     style={{
-                      background: 'transparent', border: 'none', cursor: 'pointer',
-                      padding: '2px 4px', borderRadius: 4,
-                      color: 'var(--accent)', display: 'flex', alignItems: 'center',
+                      fontSize: 9, padding: '2px 5px', borderRadius: 4,
+                      background: 'var(--bg3)', border: `1px solid ${stColor}55`,
+                      color: stColor, cursor: 'pointer',
+                      fontFamily: 'var(--font-mono)', maxWidth: 94,
                     }}
                   >
-                    <ExternalLink size={12} />
-                  </button>
-                )}
+                    {['New','Reviewing','Applied','Interview Pending','Interviewed','Offer','Passed','Closed'].map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>
+                    {r.match_score}%
+                  </span>
+                  {(r.apply_link || r.applyLink) && (
+                    <button
+                      onClick={(e) => openLink(e, r.apply_link || r.applyLink)}
+                      title="Open posting"
+                      style={{
+                        background: 'transparent', border: 'none', cursor: 'pointer',
+                        padding: '2px 4px', borderRadius: 4,
+                        color: 'var(--accent)', display: 'flex', alignItems: 'center',
+                      }}
+                    >
+                      <ExternalLink size={12} />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
           <div style={{ paddingBottom: 4 }} />
         </div>
 
