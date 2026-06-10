@@ -121,7 +121,7 @@ const SEARCHES_B2 = [
 // ── API call ──────────────────────────────────────────────────────────────────
 async function callClaude({ system, userMessage, useLiveSearch = false }) {
   const body = {
-    model: 'claude-sonnet-4-20250514',
+    model: CLAUDE_MODEL,
     max_tokens: 3000,
     system,
     messages: [{ role: 'user', content: userMessage }],
@@ -333,7 +333,7 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
       }}>
         <span style={{ color: 'var(--success)' }}>● A agents — instant, always return leads</span>
         <span style={{ color: 'var(--accent2)' }}>● B agents — live search, real postings</span>
-        <span style={{ color: 'var(--text3)' }}>Model: claude-sonnet-4-20250514</span>
+        <span style={{ color: 'var(--text3)' }}>Model: {CLAUDE_MODEL}</span>
         <span style={{ color: 'var(--warn)' }}>⏱ {DAYS_LEFT} days until June 16 deadline</span>
       </div>
 
