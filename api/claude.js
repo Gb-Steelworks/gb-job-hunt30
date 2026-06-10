@@ -2,7 +2,7 @@
 // Proxies requests to Anthropic API with optional web_search tool support
 // Drop into /api/claude.js in your repo
  
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
         'x-api-key': apiKey.trim(),
         'anthropic-version': '2023-06-01',
-        // Only send beta header when web_search tool is actually in the request
+        // Only send beta header when web_search tool is actually present
         ...(tools.length > 0 ? { 'anthropic-beta': 'web-search-2025-03-05' } : {}),
       },
       body: JSON.stringify(body),
