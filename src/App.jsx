@@ -46,9 +46,14 @@ export default function App() {
   }
 
   // Called by ApplicationsPage when status advances
-  const handleAdvanceStage = (id, newStatus) => {
+  // Handles both status changes and field edits from ApplicationsPage
+  // When called from stage buttons: onSetStatus(id, status)
+  // When called from edit form:     onSetStatus(id, status, { role_title, job_id, apply_link })
+  const handleAdvanceStage = (id, newStatus, fieldUpdates = {}) => {
     setApplications(prev => {
-      const updated = prev.map(a => a.id === id ? { ...a, status: newStatus } : a)
+      const updated = prev.map(a =>
+        a.id === id ? { ...a, status: newStatus, ...fieldUpdates } : a
+      )
       saveApplications(updated)
       return updated
     })
