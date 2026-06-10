@@ -31,7 +31,7 @@ module.exports = async function handler(req, res) {
  
   // ── Build Anthropic request ─────────────────────────────────────────────────
   const {
-    model = 'claude-sonnet-4-20250514',
+    model = 'claude-haiku-4-5-20251001', // ← update here when Anthropic deprecates — keep in sync with src/constants.js
     max_tokens = 4096,
     system,
     messages,
