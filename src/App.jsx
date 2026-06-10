@@ -11,6 +11,7 @@ import CompaniesPage from './pages/CompaniesPage'
 import LinkedInPage from './pages/LinkedInPage'
 import AgentsPage from './pages/AgentsPage'
 import ResumeVaultPage from './pages/ResumeVaultPage'
+import ExportPage from './pages/ExportPage'
 
 const NAV_ITEMS = [
   { id: 'dashboard',    label: 'Dashboard',    icon: '⬛' },
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { id: 'linkedin',     label: 'LinkedIn',     icon: '🔗' },
   { id: 'agents',       label: 'Agents',       icon: '🤖' },
   { id: 'vault',        label: 'Resume Vault', icon: '📁' },
+  { id: 'export',       label: 'Export',       icon: '💾' },
 ]
 
 export default function App() {
@@ -110,6 +112,8 @@ export default function App() {
         )
       case 'vault':
         return <ResumeVaultPage />
+      case 'export':
+        return <ExportPage />
       default:
         return (
           <DashboardPage
