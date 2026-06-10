@@ -135,6 +135,73 @@ function getInitials(name) {
 
 const COLORS = ['#0d9488','#0369a1','#065f46','#92400e','#7c3aed','#be185d','#0c4a6e','#1c1917','#b45309','#0891b2']
 
+// ContactForm lifted outside LinkedInPage to prevent remount on every keystroke
+function ContactForm({ sectionId, editing, form, ff, saveContact, cancelForm, SECTIONS }) {
+  return (
+    <div style={{
+      border: '1px solid var(--accent)', borderRadius: 'var(--radius-lg)',
+      padding: 16, background: 'rgba(0,212,170,0.04)', marginBottom: 8,
+    }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', marginBottom: 12 }}>
+        {editing ? 'Edit contact' : 'Add contact'}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+        {[
+          ['Name *', 'name', 'text', 'e.g. Cole Withers'],
+          ['Title', 'title', 'text', 'e.g. Technical Recruiter'],
+          ['Company *', 'company', 'text', 'e.g. Kforce'],
+          ['Email', 'email', 'email', 'e.g. cwithers@kforce.com'],
+        ].map(([label, key, type, ph]) => (
+          <div key={key}>
+            <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>{label}</div>
+            <input type={type} placeholder={ph} value={form[key] || ''}
+              onChange={e => ff(key, e.target.value)}
+              style={{ width: '100%', fontSize: 11 }} />
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+        <div>
+          <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>Connection degree</div>
+          <select value={form.degree || '2nd'} onChange={e => ff('degree', e.target.value)} style={{ width: '100%', fontSize: 11 }}>
+            {['1st','2nd','3rd','Search'].map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </div>
+        <div>
+          <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>Section</div>
+          <select value={form.section || sectionId} onChange={e => ff('section', e.target.value)} style={{ width: '100%', fontSize: 11 }}>
+            {SECTIONS.map(s => <option key={s.id} value={s.id}>{s.icon} {s.label.split(' — ')[0]}</option>)}
+          </select>
+        </div>
+      </div>
+      <div style={{ marginBottom: 8 }}>
+        <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>LinkedIn URL</div>
+        <input type="url" placeholder="https://www.linkedin.com/in/..." value={form.url || ''}
+          onChange={e => ff('url', e.target.value)} style={{ width: '100%', fontSize: 11 }} />
+      </div>
+      <div style={{ marginBottom: 8 }}>
+        <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>Why reach out</div>
+        <textarea rows={2} placeholder="Why this person matters to your search..."
+          value={form.why || ''} onChange={e => ff('why', e.target.value)}
+          style={{ width: '100%', fontSize: 11, resize: 'vertical' }} />
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>Tip / action</div>
+        <input type="text" placeholder="e.g. Email first, then connect on LinkedIn"
+          value={form.tip || ''} onChange={e => ff('tip', e.target.value)}
+          style={{ width: '100%', fontSize: 11 }} />
+      </div>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <button className="btn btn-sm" onClick={cancelForm}>Cancel</button>
+        <button className="btn btn-sm btn-accent" onClick={saveContact}
+          disabled={!form.name?.trim() || !form.company?.trim()}>
+          <Check size={11} /> {editing ? 'Save changes' : 'Add contact'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function LinkedInPage() {
   const [contacts, setContacts] = useState(() => load() || SEED_CONTACTS)
   const [editing,  setEditing]  = useState(null)   // contact id being edited
@@ -199,69 +266,7 @@ export default function LinkedInPage() {
     return `Hi ${c.name.split(' ')[0]},\n\nGreat to reconnect — it's been a while since our time at [company]. I'm currently exploring senior BA/PM/Agile opportunities in Houston and remotely, and thought you might know of relevant openings at your current firm or in your network.\n\nWould love to catch up briefly.\n\nBest,\nGeorge`
   }
 
-  const ContactForm = ({ sectionId }) => (
-    <div style={{
-      border: '1px solid var(--accent)', borderRadius: 'var(--radius-lg)',
-      padding: 16, background: 'rgba(0,212,170,0.04)', marginBottom: 8,
-    }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', marginBottom: 12 }}>
-        {editing ? 'Edit contact' : 'Add contact'}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-        {[
-          ['Name *', 'name', 'text', 'e.g. Cole Withers'],
-          ['Title', 'title', 'text', 'e.g. Technical Recruiter'],
-          ['Company *', 'company', 'text', 'e.g. Kforce'],
-          ['Email', 'email', 'email', 'e.g. cwithers@kforce.com'],
-        ].map(([label, key, type, ph]) => (
-          <div key={key}>
-            <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>{label}</div>
-            <input type={type} placeholder={ph} value={form[key] || ''}
-              onChange={e => ff(key, e.target.value)}
-              style={{ width: '100%', fontSize: 11 }} />
-          </div>
-        ))}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-        <div>
-          <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>Connection degree</div>
-          <select value={form.degree || '2nd'} onChange={e => ff('degree', e.target.value)} style={{ width: '100%', fontSize: 11 }}>
-            {DEGREE_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-        </div>
-        <div>
-          <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>Section</div>
-          <select value={form.section || sectionId} onChange={e => ff('section', e.target.value)} style={{ width: '100%', fontSize: 11 }}>
-            {SECTIONS.map(s => <option key={s.id} value={s.id}>{s.icon} {s.label.split(' — ')[0]}</option>)}
-          </select>
-        </div>
-      </div>
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>LinkedIn URL</div>
-        <input type="url" placeholder="https://www.linkedin.com/in/..." value={form.url || ''}
-          onChange={e => ff('url', e.target.value)} style={{ width: '100%', fontSize: 11 }} />
-      </div>
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>Why reach out</div>
-        <textarea rows={2} placeholder="Why this person matters to your search..."
-          value={form.why || ''} onChange={e => ff('why', e.target.value)}
-          style={{ width: '100%', fontSize: 11, resize: 'vertical' }} />
-      </div>
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>Tip / action</div>
-        <input type="text" placeholder="e.g. Email first, then connect on LinkedIn"
-          value={form.tip || ''} onChange={e => ff('tip', e.target.value)}
-          style={{ width: '100%', fontSize: 11 }} />
-      </div>
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button className="btn btn-sm" onClick={cancelForm}>Cancel</button>
-        <button className="btn btn-sm btn-accent" onClick={saveContact}
-          disabled={!form.name?.trim() || !form.company?.trim()}>
-          <Check size={11} /> {editing ? 'Save changes' : 'Add contact'}
-        </button>
-      </div>
-    </div>
-  )
+
 
   return (
     <div className="page">
@@ -311,7 +316,7 @@ export default function LinkedInPage() {
               </button>
             </div>
 
-            {isAddingHere && <ContactForm sectionId={section.id} />}
+            {isAddingHere && <ContactForm sectionId={section.id} editing={editing} form={form} ff={ff} saveContact={saveContact} cancelForm={cancelForm} SECTIONS={SECTIONS} />}
 
             <div className="li-grid">
               {sectionContacts.length === 0 && !isAddingHere && (
@@ -330,7 +335,7 @@ export default function LinkedInPage() {
                 const isShowingMsg  = msgDraft === c.id
 
                 if (isEditingThis) return (
-                  <div key={c.id}><ContactForm sectionId={c.section} /></div>
+                  <div key={c.id}><ContactForm sectionId={c.section} editing={editing} form={form} ff={ff} saveContact={saveContact} cancelForm={cancelForm} SECTIONS={SECTIONS} /></div>
                 )
 
                 return (
