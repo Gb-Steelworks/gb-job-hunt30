@@ -2,6 +2,7 @@
 // v2 — ATS step downloads edited .docx AND saves to GitHub
 
 import { useState, useEffect, useRef } from 'react'
+import { CLAUDE_MODEL } from '../constants.js'
 import { X, Copy, Check, ChevronRight, Loader, Download } from 'lucide-react'
 import { suggestVariant } from '../pages/ResumeVaultPage.jsx'
 
@@ -38,7 +39,7 @@ async function claude(system, user) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: CLAUDE_MODEL,
         max_tokens: 1200,
         system,
         messages: [{ role: 'user', content: user }],
