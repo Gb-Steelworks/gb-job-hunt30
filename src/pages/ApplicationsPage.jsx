@@ -2,7 +2,7 @@
 // Full application pipeline: Applied → Reply → Interview Pending → Interviewed → Offer → Closed
 
 import { useState } from 'react'
-import { ChevronRight, Star, ExternalLink, Clock, TrendingUp } from 'lucide-react'
+import { ChevronRight, Star, ExternalLink, Clock, TrendingUp, Pencil, Check, X } from 'lucide-react'
 
 const STAGES = ['Applied', 'Reply', 'Interview Pending', 'Interviewed', 'Offer', 'Closed']
 
@@ -60,8 +60,24 @@ function StageBar({ current }) {
 }
 
 export default function ApplicationsPage({ applications = [], onAdvanceStage, onSetStatus }) {
-  const [filter, setFilter] = useState('All')
+  const [filter,  setFilter]  = useState('All')
   const [selected, setSelected] = useState(null)
+  const [editing,  setEditing]  = useState(null)   // id of app being edited
+  const [editForm, setEditForm] = useState({})      // { role_title, job_id, apply_link }
+
+  const startEdit = (e, a) => {
+    e.stopPropagation()
+    setEditing(a.id)
+    setEditForm({ role_title: a.role_title || '', job_id: a.job_id || '', apply_link: a.apply_link || '' })
+  }
+
+  const saveEdit = (e, a) => {
+    e.stopPropagation()
+    onSetStatus?.(a.id, a.status, editForm)   // reuse onSetStatus as a generic update fn
+    setEditing(null)
+  }
+
+  const cancelEdit = (e) => { e.stopPropagation(); setEditing(null) }
 
   const filtered = filter === 'All' ? applications : applications.filter(a => a.status === filter)
 
@@ -137,6 +153,7 @@ export default function ApplicationsPage({ applications = [], onAdvanceStage, on
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {a.role_title}
+                    {a.job_id && <span style={{ marginLeft: 8, fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--accent2)', fontWeight: 400 }}>#{a.job_id}</span>}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <span>{a.company}</span>
@@ -157,21 +174,84 @@ export default function ApplicationsPage({ applications = [], onAdvanceStage, on
               {selected === a.id && (
                 <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
                   <StageBar current={a.status} />
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-                    {[
-                      ['Type', a.type],
-                      ['Work model', a.work_model],
-                      ['Cover letter', a.cover_letter ? '✅ Yes' : '—'],
-                      ['Q&A prep', a.qa_prep ? '✅ Yes' : '—'],
-                      ['Recruiter', a.recruiter_name || '—'],
-                      ['Contact', a.recruiter_email || '—'],
-                    ].map(([k, v]) => (
-                      <div key={k}>
-                        <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 2 }}>{k}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text2)' }}>{v}</div>
+
+                  {/* ── Inline edit form ── */}
+                  {editing === a.id ? (
+                    <div style={{ marginBottom: 14, padding: '12px 14px', background: 'rgba(0,212,170,0.04)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 'var(--radius)' }}
+                      onClick={e => e.stopPropagation()}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', marginBottom: 10 }}>Edit application details</div>
+                      <div style={{ display: 'grid', gap: 8, marginBottom: 10 }}>
+                        <div>
+                          <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>Role title</div>
+                          <input
+                            type="text"
+                            value={editForm.role_title}
+                            onChange={e => setEditForm(f => ({ ...f, role_title: e.target.value }))}
+                            style={{ width: '100%', fontSize: 12 }}
+                            placeholder="e.g. Senior Business Analyst"
+                          />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          <div>
+                            <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>Job ID / Req #</div>
+                            <input
+                              type="text"
+                              value={editForm.job_id}
+                              onChange={e => setEditForm(f => ({ ...f, job_id: e.target.value }))}
+                              style={{ width: '100%', fontSize: 12 }}
+                              placeholder="e.g. JR-12345"
+                            />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>Apply URL</div>
+                            <input
+                              type="url"
+                              value={editForm.apply_link}
+                              onChange={e => setEditForm(f => ({ ...f, apply_link: e.target.value }))}
+                              style={{ width: '100%', fontSize: 12 }}
+                              placeholder="https://..."
+                            />
+                          </div>
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                        <button onClick={cancelEdit}
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', fontSize: 11, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--text3)', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                          <X size={11} /> Cancel
+                        </button>
+                        <button onClick={e => saveEdit(e, a)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', fontSize: 11, background: 'rgba(0,212,170,0.12)', border: '1px solid rgba(0,212,170,0.3)', borderRadius: 'var(--radius)', color: 'var(--accent)', cursor: 'pointer', fontWeight: 600, fontFamily: 'var(--font)' }}>
+                          <Check size={11} /> Save
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ── Read view with edit button ── */
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                        {[
+                          ['Type',         a.type],
+                          ['Work model',   a.work_model],
+                          ['Cover letter', a.cover_letter ? '✅ Yes' : '—'],
+                          ['Q&A prep',     a.qa_prep ? '✅ Yes' : '—'],
+                          ['Recruiter',    a.recruiter_name || '—'],
+                          ['Contact',      a.recruiter_email || '—'],
+                          ['Job ID',       a.job_id || '—'],
+                        ].map(([k, v]) => (
+                          <div key={k}>
+                            <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 2 }}>{k}</div>
+                            <div style={{ fontSize: 12, color: 'var(--text2)' }}>{v}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <button onClick={e => startEdit(e, a)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', fontSize: 11, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--text3)', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                        <Pencil size={11} /> Edit title / Job ID / URL
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Stage selector */}
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {STAGES.map(s => (
                       <button
@@ -190,8 +270,12 @@ export default function ApplicationsPage({ applications = [], onAdvanceStage, on
                       </button>
                     ))}
                   </div>
-                  {a.apply_link && (
-                    <a href={a.apply_link} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: 11, color: 'var(--accent2)' }}>
+
+                  {/* Apply link */}
+                  {(a.apply_link || editForm.apply_link) && editing !== a.id && (
+                    <a href={a.apply_link} target="_blank" rel="noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: 11, color: 'var(--accent2)' }}
+                      onClick={e => e.stopPropagation()}>
                       <ExternalLink size={11} /> View posting
                     </a>
                   )}
