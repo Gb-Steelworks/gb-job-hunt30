@@ -3,6 +3,7 @@
 // Fixes: View All button, agent leads persisting, application counts, deadline
 
 import { useState } from 'react'
+import { loadApplications, saveApplications, upsertApplication, loadAgentLeads, mergeAgentLeads, loadLeadStatuses, saveLeadStatus } from './store/appStore.js'
 import DashboardPage from './pages/DashboardPage'
 import LeadsPage from './pages/LeadsPage'
 import ApplicationsPage from './pages/ApplicationsPage'
@@ -25,31 +26,36 @@ export default function App() {
   const [page,         setPage]         = useState('dashboard')
   const [menuOpen,     setMenuOpen]     = useState(false)
   // ── Shared state ────────────────────────────────────────────────────────────
-  const [agentLeads,   setAgentLeads]   = useState([])   // leads found by agents
-  const [applications, setApplications] = useState([])   // logged applications
+  const [agentLeads,   setAgentLeads]   = useState(() => loadAgentLeads())
+  const [applications, setApplications] = useState(() => loadApplications())
+  const [leadStatuses, setLeadStatuses] = useState(() => loadLeadStatuses())
   const [extraPatterns,setExtraPatterns]= useState([])   // role patterns from + Add Lead
 
   // Called by AgentsPage when a run completes — merges new leads into agentLeads
   const handleLeadsFound = (newLeads) => {
-    setAgentLeads(prev => {
-      const existingIds = new Set(prev.map(l => l.id))
-      const deduped = newLeads.filter(l => !existingIds.has(l.id))
-      return [...prev, ...deduped]
-    })
+    const merged = mergeAgentLeads(newLeads)
+    setAgentLeads(merged)
   }
 
   // Called by LeadsPage/RoleActionPanel when user logs an application
   const handleApplicationLogged = (appData) => {
-    setApplications(prev => {
-      const exists = prev.find(a => a.id === appData.id)
-      if (exists) return prev.map(a => a.id === appData.id ? { ...a, ...appData } : a)
-      return [...prev, appData]
-    })
+    const updated = upsertApplication(appData)
+    setApplications(updated)
   }
 
   // Called by ApplicationsPage when status advances
   const handleAdvanceStage = (id, newStatus) => {
-    setApplications(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a))
+    setApplications(prev => {
+      const updated = prev.map(a => a.id === id ? { ...a, status: newStatus } : a)
+      saveApplications(updated)
+      return updated
+    })
+  }
+
+  // Called from Dashboard or LeadsPage when a lead status changes
+  const handleLeadStatusChange = (id, newStatus) => {
+    saveLeadStatus(id, newStatus)
+    setLeadStatuses(prev => ({ ...prev, [id]: newStatus }))
   }
 
   // Called by LeadsPage + Add Lead modal to feed agent context
@@ -71,6 +77,8 @@ export default function App() {
             onNavigate={navigate}
             leads={agentLeads}
             applications={applications}
+            leadStatuses={leadStatuses}
+            onLeadStatusChange={handleLeadStatusChange}
           />
         )
       case 'leads':
@@ -108,6 +116,8 @@ export default function App() {
             onNavigate={navigate}
             leads={agentLeads}
             applications={applications}
+            leadStatuses={leadStatuses}
+            onLeadStatusChange={handleLeadStatusChange}
           />
         )
     }
