@@ -17,7 +17,7 @@ Target roles (priority order):
 4. Manual QA Lead / QA Manager / QA Director / Test Lead
 
 Work preference: Remote first, Houston TX hybrid/onsite acceptable, Dallas/Austin TX considered
-Contract OR Full-Time — needs role by June 10, 2026
+Contract OR Full-Time — needs role by June 16, 2026
 Rate: $55-85/hr contract · $110-140K FT
 
 Background: 20+ years FSI, federal govt, enterprise tech
@@ -26,6 +26,14 @@ Certs: CSM, SAFe POPM, PMP (exp Jun 2026), Azure, Gen AI
 Tools: JIRA, Confluence, Power BI, Selenium, Smartsheet, Azure`
 
 // ── Agent A: Memory-based system prompt ──────────────────────────────────────
+
+// ── CONTACT RULE injected into all agent prompts ──────────────────────────────
+const CONTACT_RULE = `
+CRITICAL — contacts:
+- contact_name: ONLY if explicitly listed on the job posting. Otherwise null.
+- contact_email: ONLY if a direct email is publicly listed. Do NOT construct emails. Otherwise null.
+- Returning null is always better than inventing a name or email.`
+
 const SYSTEM_A1 = `You are a job search agent for George Brooks, Houston TX.
 
 Generate a list of realistic, high-probability job leads from staffing firms and job boards that would currently be hiring for his profile. Base this on your knowledge of these firms' typical active roles for senior BA/PM/QA/Agile professionals in Texas and remote.
@@ -46,15 +54,20 @@ Each object:
   "pay_rate": string,
   "days_posted": number | null,
   "match_score": number,
-  "contact_name": string,
-  "contact_email": string,
+  "contact_name": string | null,
+  "contact_email": string | null,
   "apply_link": string,
   "notes": string
 }
 
 Return 8-10 leads. match_score 75-98 based on George's FSI/Agile/BA/QA background.
 For apply_link use the firm's job search page (e.g. https://www.kforce.com/find-work/search-jobs/).
-Be realistic — only roles that would genuinely exist for a 20-year senior professional.`
+Be realistic — only roles that would genuinely exist for a 20-year senior professional.
+For each lead, also check LinkedIn for recruiters at these staffing firms actively posting
+similar roles in Texas. If a specific recruiter name appears on the LinkedIn posting,
+include it as contact_name. Use the firm job search page as apply_link, or a direct
+LinkedIn job URL if that is where the posting lives.
+${CONTACT_RULE}`
 
 const SYSTEM_A2 = `You are a job search agent for George Brooks, Houston TX.
 
@@ -76,15 +89,16 @@ Each object:
   "pay_rate": string,
   "days_posted": number | null,
   "match_score": number,
-  "contact_name": string,
-  "contact_email": string,
+  "contact_name": string | null,
+  "contact_email": string | null,
   "apply_link": string,
   "notes": string
 }
 
 Return 8-10 leads. match_score 75-98 based on George's FSI/consulting/Capco/Deloitte background.
 For apply_link use the firm's careers page.
-Prioritize consulting roles — George has Capco (2021-24) and Deloitte (2011-14) tenure which gives returnee advantage.`
+Prioritize consulting roles — George has Capco (2021-24) and Deloitte (2011-14) tenure which gives returnee advantage.
+${CONTACT_RULE}`
 
 // ── Agent B: Live web search system prompt ────────────────────────────────────
 const SYSTEM_B1 = `You are a job search agent. Use web_search to find real live job postings.
@@ -107,7 +121,7 @@ const SEARCHES_B2 = [
 // ── API call ──────────────────────────────────────────────────────────────────
 async function callClaude({ system, userMessage, useLiveSearch = false }) {
   const body = {
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-4-20250514',
     max_tokens: 3000,
     system,
     messages: [{ role: 'user', content: userMessage }],
@@ -141,6 +155,19 @@ async function callClaude({ system, userMessage, useLiveSearch = false }) {
   const end = cleaned.lastIndexOf(']')
   if (start === -1 || end === -1) return []
   try { return JSON.parse(cleaned.slice(start, end + 1)) } catch { return [] }
+}
+
+
+// Strip hallucinated firstname.lastname@domain emails — second line of defense
+function scrubContacts(leads) {
+  return leads.map(l => {
+    const looksConstructed = /^[a-z]+\.[a-z]+@/i.test(l.contact_email || '')
+    return {
+      ...l,
+      contact_name:  l.contact_name  || null,
+      contact_email: looksConstructed ? null : (l.contact_email || null),
+    }
+  })
 }
 
 const AUTOMATION = [
@@ -209,7 +236,8 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
       if (!Array.isArray(leads)) throw new Error('Invalid response — expected JSON array')
 
       const filtered = leads.filter(l => l.apply_link && l.role_title)
-      const stamped = filtered.map((l, i) => ({
+      const cleaned  = scrubContacts(filtered)
+      const stamped  = cleaned.map((l, i) => ({
         ...l,
         id: Date.now() + i,
         status: 'New',
@@ -293,7 +321,7 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
       <div className="page-header">
         <div className="page-title">Agents</div>
         <div className="page-sub">
-          A agents: instant memory-based leads · B agents: live web search · Deadline extended to June 10
+          A agents: instant memory-based leads · B agents: live web search · Deadline: June 16
         </div>
       </div>
 
@@ -305,8 +333,8 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
       }}>
         <span style={{ color: 'var(--success)' }}>● A agents — instant, always return leads</span>
         <span style={{ color: 'var(--accent2)' }}>● B agents — live search, real postings</span>
-        <span style={{ color: 'var(--text3)' }}>Model: claude-sonnet-4-6</span>
-        <span style={{ color: 'var(--warn)' }}>⏱ {DAYS_LEFT} days until June 10 deadline</span>
+        <span style={{ color: 'var(--text3)' }}>Model: claude-sonnet-4-20250514</span>
+        <span style={{ color: 'var(--warn)' }}>⏱ {DAYS_LEFT} days until June 16 deadline</span>
       </div>
 
       <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
