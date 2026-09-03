@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Job Pursuit Manifest",
+  "description": "One of these per discovered role — the full record from discovery through tailored output.",
+  "type": "object",
+  "required": ["job_snapshot", "sot_recommendation", "fit_analysis", "opportunity_analysis", "recommendation", "data_integrity"],
+  "properties": {
+    "job_snapshot": {
+      "type": "object",
+      "properties": {
+        "company": { "type": "string" },
+        "role": { "type": "string" },
+        "location": { "type": "string" },
+        "work_arrangement": { "type": "string" },
+        "employment_type": { "type": "string" },
+        "posting_date": { "type": "string" },
+        "job_id": { "type": "string" },
+        "compensation": { "type": "string" },
+        "source": { "type": "string" },
+        "application_url": { "type": "string" }
+      }
+    },
+    "sot_recommendation": {
+      "type": "object",
+      "properties": {
+        "selected_sot_key": { "type": "string" },
+        "tier": { "type": "string" },
+        "rationale": { "type": "string" }
+      }
+    },
+    "fit_analysis": {
+      "type": "object",
+      "properties": {
+        "fit_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "requirement_matches": { "type": "array" },
+        "genuine_gaps": { "type": "array" }
+      }
+    },
+    "opportunity_analysis": {
+      "type": "object",
+      "properties": {
+        "opportunity_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "recency_effect": { "type": "string" },
+        "priority": { "type": "boolean", "description": "true if posting age < 21 days" },
+        "contact_status": { "type": "string" }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "properties": {
+        "grade": { "type": "string", "enum": ["A", "B", "C", "D", "E"] },
+        "rationale": { "type": "string" },
+        "next_action": { "type": "string" }
+      }
+    },
+    "tailoring": {
+      "type": "object",
+      "description": "Absent until the user chooses to pursue this role and triggers Phase 3.",
+      "properties": {
+        "sot_used": { "type": "string" },
+        "tailoring_status": { "type": "string", "enum": ["not_started", "pending_review", "approved", "rejected"] },
+        "output_a_ats_docx": { "type": "string" },
+        "output_a_ats_pdf": { "type": "string" },
+        "output_b_print_docx_redlined": { "type": "string" },
+        "output_b_print_docx_final": { "type": "string" },
+        "output_b_print_pdf_final": { "type": "string" },
+        "changes_summary": { "type": "array" }
+      }
+    },
+    "cover_letter": {
+      "type": "object",
+      "description": "Absent until Phase 4 runs — requires approved tailoring output first.",
+      "properties": {
+        "cover_letter_docx": { "type": "string" },
+        "sourcing_notes": { "type": "array" }
+      }
+    },
+    "data_integrity": {
+      "type": "object",
+      "properties": {
+        "unverified_items": { "type": "array" },
+        "assumptions_or_inferences": { "type": "array" }
+      }
+    }
+  }
+}
