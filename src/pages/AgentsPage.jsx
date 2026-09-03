@@ -1,384 +1,169 @@
 // src/pages/AgentsPage.jsx
-// Agent A: Memory-based (instant, always returns leads)
-// Agent B: Live web search (real postings, slower)
+// REPLACES the old A1/A2 (memory-based, fabrication-prone) / B1/B2 (live search)
+// client-side split. All discovery now goes through api/run-agents.js, which
+// always uses live web_search and never asks the model to invent a posting —
+// see PATCH notes in the implementation drop for why the old A1/A2 had to go.
+//
+// Categories come from src/agentCategories.js (single source of truth for
+// company lists, keywords, cadence, source method) — this page doesn't
+// duplicate that config, it just triggers runs and displays results.
 
-import { useState, useEffect } from 'react'
-import { getAgentRun, setAgentRun } from '../store/agentStore.js'
-import { Bot, Clock, Zap, Loader, AlertCircle } from 'lucide-react'
-import { CLAUDE_MODEL } from '../constants.js'
+import { useState } from 'react'
+import { Bot, Clock, Loader, AlertCircle, PlayCircle } from 'lucide-react'
+import { AGENT_CATEGORIES, shouldRunToday } from '../agentCategories.js'
 
-const DEADLINE = new Date('2026-06-16') // extended by 7 days
-const DAYS_LEFT = Math.max(0, Math.ceil((DEADLINE - new Date()) / (1000 * 60 * 60 * 24)))
-
-const GEORGE_PROFILE = `Candidate: George Brooks, Houston TX
-Target roles (priority order):
-1. Business Analyst / Senior BA / Lead BA
-2. Agile Project Manager / Scrum Master / Delivery Manager
-3. Product Manager / Product Owner
-4. Manual QA Lead / QA Manager / QA Director / Test Lead
-
-Work preference: Remote first, Houston TX hybrid/onsite acceptable, Dallas/Austin TX considered
-Contract OR Full-Time — needs role by June 16, 2026
-Rate: $55-85/hr contract · $110-140K FT
-
-Background: 20+ years FSI, federal govt, enterprise tech
-Key employers: JPMC, Capco, Deloitte, Makpar/IRS, Supply Bistro
-Certs: CSM, SAFe POPM, PMP (exp Jun 2026), Azure, Gen AI
-Tools: JIRA, Confluence, Power BI, Selenium, Smartsheet, Azure`
-
-// ── Agent A: Memory-based system prompt ──────────────────────────────────────
-
-// ── CONTACT RULE injected into all agent prompts ──────────────────────────────
-const CONTACT_RULE = `
-CRITICAL — contacts:
-- contact_name: ONLY if explicitly listed on the job posting. Otherwise null.
-- contact_email: ONLY if a direct email is publicly listed. Do NOT construct emails. Otherwise null.
-- Returning null is always better than inventing a name or email.`
-
-const SYSTEM_A1 = `You are a job search agent for George Brooks, Houston TX.
-
-Generate a list of realistic, high-probability job leads from staffing firms and job boards that would currently be hiring for his profile. Base this on your knowledge of these firms' typical active roles for senior BA/PM/QA/Agile professionals in Texas and remote.
-
-Firms to cover: TekSystems, Kforce, Judge Group, Insight Global, Apex Group, CyberCoders, Aerotek, TEKsystems, Robert Half Technology.
-Locations: Houston TX, Dallas TX, Austin TX, Remote.
-
-Return ONLY a valid JSON array, no markdown, no explanation.
-Each object:
-{
-  "role_title": string,
-  "company": string,
-  "via": string,
-  "category": "QA" | "BA" | "PM" | "Consulting",
-  "type": "Contract" | "Full-Time" | "Contract-to-Hire",
-  "work_model": "Remote" | "Hybrid" | "On-site",
-  "location": string,
-  "pay_rate": string,
-  "days_posted": number | null,
-  "match_score": number,
-  "contact_name": string | null,
-  "contact_email": string | null,
-  "apply_link": string,
-  "notes": string
+const CATEGORY_META = {
+  watchlist:        { label: 'Watchlist Companies',  color: 'var(--accent)' },
+  staffing:         { label: 'Staffing Firms',       color: 'var(--accent2)' },
+  tier1_consulting: { label: 'Tier 1 Consulting',    color: 'var(--accent)' },
+  tier2_consulting: { label: 'Tier 2 Consulting',    color: 'var(--accent2)' },
+  government:       { label: 'Government',           color: 'var(--accent)' },
 }
 
-Return 8-10 leads. match_score 75-98 based on George's FSI/Agile/BA/QA background.
-For apply_link use the firm's job search page (e.g. https://www.kforce.com/find-work/search-jobs/).
-Be realistic — only roles that would genuinely exist for a 20-year senior professional.
-For each lead, also check LinkedIn for recruiters at these staffing firms actively posting
-similar roles in Texas. If a specific recruiter name appears on the LinkedIn posting,
-include it as contact_name. Use the firm job search page as apply_link, or a direct
-LinkedIn job URL if that is where the posting lives.
-${CONTACT_RULE}`
+export default function AgentsPage({ onLeadsFound }) {
+  const [states, setStates] = useState(() =>
+    Object.fromEntries(
+      Object.keys(AGENT_CATEGORIES).map(key => [key, { status: 'idle', lastRun: null, leadsFound: null, log: [] }])
+    )
+  )
+  const [runningAll, setRunningAll] = useState(false)
 
-const SYSTEM_A2 = `You are a job search agent for George Brooks, Houston TX.
-
-Generate a list of realistic, high-probability job leads from FSI firms, boutique consulting firms, and government entities that would currently be hiring for his profile.
-
-Firms to cover: Capco, Deloitte, KPMG, EY, Accenture, Slalom, West Monroe, Pariveda, Huron, JPMC, Wells Fargo, USAA, Frost Bank, City of Houston, Harris County.
-Locations: Houston TX, Dallas TX, Remote.
-
-Return ONLY a valid JSON array, no markdown, no explanation.
-Each object:
-{
-  "role_title": string,
-  "company": string,
-  "via": string,
-  "category": "QA" | "BA" | "PM" | "Consulting",
-  "type": "Contract" | "Full-Time" | "Contract-to-Hire",
-  "work_model": "Remote" | "Hybrid" | "On-site",
-  "location": string,
-  "pay_rate": string,
-  "days_posted": number | null,
-  "match_score": number,
-  "contact_name": string | null,
-  "contact_email": string | null,
-  "apply_link": string,
-  "notes": string
-}
-
-Return 8-10 leads. match_score 75-98 based on George's FSI/consulting/Capco/Deloitte background.
-For apply_link use the firm's careers page.
-Prioritize consulting roles — George has Capco (2021-24) and Deloitte (2011-14) tenure which gives returnee advantage.
-${CONTACT_RULE}`
-
-// ── Agent B: Live web search system prompt ────────────────────────────────────
-const SYSTEM_B1 = `You are a job search agent. Use web_search to find real live job postings.
-Return ONLY a valid JSON array. Each object: { "role_title": string, "company": string, "via": string, "category": "QA"|"BA"|"PM"|"Consulting", "type": "Contract"|"Full-Time"|"Contract-to-Hire"|"Unknown", "work_model": "Remote"|"Hybrid"|"On-site"|"Unknown", "location": string, "pay_rate": string, "days_posted": number|null, "match_score": number, "contact_name": string, "contact_email": string, "apply_link": string, "notes": string }
-Use LinkedIn/Indeed URLs as apply_link if no direct ATS link. Return [] only if truly nothing found.`
-
-const SYSTEM_B2 = SYSTEM_B1
-
-const SEARCHES_B1 = [
-  'Kforce contract senior business analyst Houston Texas remote 2026',
-  'TekSystems contract agile project manager scrum master Houston Texas 2026',
-  'Judge Group contract business analyst QA lead Houston Texas 2026',
-]
-
-const SEARCHES_B2 = [
-  'Capco Deloitte Slalom agile delivery manager business analyst Houston Texas jobs 2026',
-  'Harris County KPMG Accenture business analyst project manager Houston Texas 2026',
-]
-
-// ── API call ──────────────────────────────────────────────────────────────────
-async function callClaude({ system, userMessage, useLiveSearch = false }) {
-  const body = {
-    model: CLAUDE_MODEL,
-    max_tokens: 3000,
-    system,
-    messages: [{ role: 'user', content: userMessage }],
-  }
-
-  if (useLiveSearch) {
-    body.tools = [{ type: 'web_search_20250305', name: 'web_search' }]
-  }
-
-  const res = await fetch('/api/claude', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-
-  const data = await res.json()
-  if (data.error) {
-    const msg = typeof data.error === 'string' ? data.error : data.error?.message || JSON.stringify(data.error)
-    throw new Error(msg)
-  }
-
-  const text = (data.content || [])
-    .filter(b => b.type === 'text')
-    .map(b => b.text || '')
-    .join('')
-    .trim()
-
-  if (!text) return []
-  const cleaned = text.replace(/```json|```/g, '').trim()
-  const start = cleaned.indexOf('[')
-  const end = cleaned.lastIndexOf(']')
-  if (start === -1 || end === -1) return []
-  try { return JSON.parse(cleaned.slice(start, end + 1)) } catch { return [] }
-}
-
-
-// Strip hallucinated firstname.lastname@domain emails — second line of defense
-function scrubContacts(leads) {
-  return leads.map(l => {
-    const looksConstructed = /^[a-z]+\.[a-z]+@/i.test(l.contact_email || '')
-    return {
-      ...l,
-      contact_name:  l.contact_name  || null,
-      contact_email: looksConstructed ? null : (l.contact_email || null),
-    }
-  })
-}
-
-const AUTOMATION = [
-  { label: 'Option A — Manual', detail: 'Click Run on each agent every Mon/Wed/Fri. Takes 2 min.', effort: 'Zero setup' },
-  { label: 'Option B — Make.com', detail: 'Free tier. Fires every 48h at 8 AM CT, emails digest to ghbrooks4@gmail.com.', effort: '30 min setup' },
-  { label: 'Option C — Vercel cron', detail: 'Add /api/run-agents.js + Supabase to persist leads automatically.', effort: '1-2 sessions' },
-]
-
-export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
-  const [states, setStates] = useState(() => {
-    const ids = ['A1', 'A2', 'B1', 'B2']
-    return Object.fromEntries(ids.map(id => {
-      const saved = getAgentRun(id)
-      return [id, { status: 'idle', lastRun: saved.lastRun, leadsFound: saved.leadsFound, log: [] }]
-    }))
-  })
-
-  const addLog = (id, msg) => setStates(prev => ({
+  const addLog = (key, msg) => setStates(prev => ({
     ...prev,
-    [id]: { ...prev[id], log: [...(prev[id].log || []), `${new Date().toLocaleTimeString()} — ${msg}`] }
+    [key]: { ...prev[key], log: [...(prev[key].log || []), `${new Date().toLocaleTimeString()} — ${msg}`] }
   }))
 
-  const runAgent = async (id) => {
-    setStates(prev => ({ ...prev, [id]: { ...prev[id], status: 'running', log: [] } }))
-
-    const isLive = id.startsWith('B')
-    const agentNum = id[1]
-
-    addLog(id, `Starting ${isLive ? 'live web search' : 'memory-based'} agent ${agentNum}...`)
-    if (isLive) addLog(id, 'Running live searches — may take 30–60 seconds...')
-    else addLog(id, 'Generating leads from training knowledge — usually 10–15 seconds...')
-
-    const extraContext = extraPatterns.length > 0
-      ? `\n\nAlso include roles similar to: ${extraPatterns.map(p => `${p.role_title} at ${p.company}`).join(', ')}`
-      : ''
+  const runCategories = async (categoryKeys, { force = false } = {}) => {
+    categoryKeys.forEach(key => {
+      setStates(prev => ({ ...prev, [key]: { ...prev[key], status: 'running', log: [] } }))
+      addLog(key, `Starting live search — may take 30-90 seconds per category...`)
+    })
 
     try {
-      let leads = []
+      const params = new URLSearchParams({ categories: categoryKeys.join(',') })
+      if (force) params.set('force', 'true')
 
-      if (id === 'A1') {
-        leads = await callClaude({
-          system: SYSTEM_A1,
-          userMessage: `Generate job leads for George Brooks from staffing firms.\n\n${GEORGE_PROFILE}${extraContext}\n\nReturn 8-10 leads as a JSON array.`,
-        })
-      } else if (id === 'A2') {
-        leads = await callClaude({
-          system: SYSTEM_A2,
-          userMessage: `Generate job leads for George Brooks from FSI and consulting firms.\n\n${GEORGE_PROFILE}${extraContext}\n\nReturn 8-10 leads as a JSON array.`,
-        })
-      } else if (id === 'B1') {
-        const searches = SEARCHES_B1.map((s, i) => `${i + 1}. ${s}`).join('\n')
-        leads = await callClaude({
-          system: SYSTEM_B1,
-          userMessage: `Find live job postings for:\n${GEORGE_PROFILE}${extraContext}\n\nSearch queries:\n${searches}\n\nReturn JSON array of all real postings found.`,
-          useLiveSearch: true,
-        })
-      } else if (id === 'B2') {
-        const searches = SEARCHES_B2.map((s, i) => `${i + 1}. ${s}`).join('\n')
-        leads = await callClaude({
-          system: SYSTEM_B2,
-          userMessage: `Find live job postings for:\n${GEORGE_PROFILE}${extraContext}\n\nSearch queries:\n${searches}\n\nReturn JSON array of all real postings found.`,
-          useLiveSearch: true,
-        })
-      }
+      const res = await fetch(`/api/run-agents?${params.toString()}`)
+      const data = await res.json()
 
-      if (!Array.isArray(leads)) throw new Error('Invalid response — expected JSON array')
+      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`)
 
-      const filtered = leads.filter(l => l.apply_link && l.role_title)
-      const cleaned  = scrubContacts(filtered)
-      const stamped  = cleaned.map((l, i) => ({
-        ...l,
-        id: Date.now() + i,
-        status: 'New',
-        agent: id,
-      }))
+      const now = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
-      setStates(prev => ({
-        ...prev,
-        [id]: {
-          ...prev[id],
-          status: 'idle',
-          lastRun: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          leadsFound: stamped.length,
-          log: [
-            ...(prev[id].log || []),
-            `${new Date().toLocaleTimeString()} — ✅ ${stamped.length} leads found`
-          ]
-        }
-      }))
+      categoryKeys.forEach(key => {
+        const count = data.by_category?.[key] ?? 0
+        setStates(prev => ({
+          ...prev,
+          [key]: {
+            ...prev[key],
+            status: 'idle',
+            lastRun: now,
+            leadsFound: count,
+            log: [...(prev[key].log || []), `${new Date().toLocaleTimeString()} — ✅ ${count} leads found`],
+          },
+        }))
+      })
 
+      // Stamp status:'New' so LeadsPage's status dropdown and mergeAgentLeads
+      // dedup-by-id both work the same way they did with the old agent output.
+      const stamped = (data.leads || []).map(l => ({ ...l, status: l.status || 'New' }))
       if (stamped.length > 0) {
-        setAgentRun(id, new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), stamped.length)
-        setTimeout(() => onLeadsFound?.(stamped), 300)
-      } else {
-        addLog(id, '⚠️ No leads returned — try again')
+        setTimeout(() => onLeadsFound?.(stamped), 200)
       }
 
+      if (!data.leads || data.leads.length === 0) {
+        categoryKeys.forEach(key => addLog(key, '⚠️ No leads returned this run — that can be correct, not just an error'))
+      }
     } catch (e) {
-      setStates(prev => ({
-        ...prev,
-        [id]: {
-          ...prev[id],
-          status: 'error',
-          log: [...(prev[id].log || []), `${new Date().toLocaleTimeString()} — ❌ Error: ${e.message}`]
-        }
-      }))
+      categoryKeys.forEach(key => {
+        setStates(prev => ({
+          ...prev,
+          [key]: {
+            ...prev[key],
+            status: 'error',
+            log: [...(prev[key].log || []), `${new Date().toLocaleTimeString()} — ❌ Error: ${e.message}`],
+          },
+        }))
+      })
     }
   }
 
-  const AGENTS = [
-    {
-      id: 'A1',
-      name: 'Agent A1 — Job Scout (instant)',
-      icon: Bot,
-      color: 'var(--accent)',
-      badge: 'FAST',
-      badgeColor: 'var(--success)',
-      desc: 'Memory-based — generates leads from TekSystems, Kforce, Judge Group, Insight Global, Indeed, LinkedIn. Instant results, always works. Verify links manually.',
-    },
-    {
-      id: 'A2',
-      name: 'Agent A2 — FSI & Boutique (instant)',
-      icon: Bot,
-      color: 'var(--accent)',
-      badge: 'FAST',
-      badgeColor: 'var(--success)',
-      desc: 'Memory-based — generates leads from Capco, Deloitte, KPMG, EY, Slalom, West Monroe, JPMC, Harris County. Instant results, always works.',
-    },
-    {
-      id: 'B1',
-      name: 'Agent B1 — Job Scout (live search)',
-      icon: Zap,
-      color: 'var(--accent2)',
-      badge: 'LIVE',
-      badgeColor: 'var(--accent2)',
-      desc: 'Live web search — hits real job boards for verified current postings. Slower (30–60s), subject to rate limits. Run after A agents.',
-    },
-    {
-      id: 'B2',
-      name: 'Agent B2 — FSI & Boutique (live search)',
-      icon: Zap,
-      color: 'var(--accent2)',
-      badge: 'LIVE',
-      badgeColor: 'var(--accent2)',
-      desc: 'Live web search — searches Capco, Deloitte, Slalom, Harris County career pages for real current postings. Run after B1 finishes.',
-    },
-  ]
+  const runOne = (key) => runCategories([key], { force: true })
+
+  const runAllScheduled = async () => {
+    setRunningAll(true)
+    const today = new Date()
+    const scheduledToday = Object.keys(AGENT_CATEGORIES).filter(key => shouldRunToday(key, today))
+    if (scheduledToday.length === 0) {
+      alert('No categories are scheduled to run today. Use an individual Run Now button to run one anyway.')
+      setRunningAll(false)
+      return
+    }
+    await runCategories(scheduledToday)
+    setRunningAll(false)
+  }
 
   return (
     <div className="page">
       <div className="page-header">
         <div className="page-title">Agents</div>
         <div className="page-sub">
-          A agents: instant memory-based leads · B agents: live web search · Deadline: June 16
+          Live web search only — every category, every run. Cron fires Mon-Fri; each category
+          runs on its own scheduled days automatically.
         </div>
       </div>
 
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
-        padding: '10px 14px', marginBottom: 16,
-        background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)',
-        borderRadius: 'var(--radius)', fontSize: 11, fontFamily: 'var(--font-mono)',
-      }}>
-        <span style={{ color: 'var(--success)' }}>● A agents — instant, always return leads</span>
-        <span style={{ color: 'var(--accent2)' }}>● B agents — live search, real postings</span>
-        <span style={{ color: 'var(--text3)' }}>Model: {CLAUDE_MODEL}</span>
-        <span style={{ color: 'var(--warn)' }}>⏱ {DAYS_LEFT} days until June 16 deadline</span>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <button className="btn btn-accent" disabled={runningAll} onClick={runAllScheduled}>
+          {runningAll
+            ? <><Loader size={12} style={{ animation: 'spin .8s linear infinite' }} /> Running scheduled categories...</>
+            : <><PlayCircle size={12} /> Run All Scheduled Today</>}
+        </button>
       </div>
 
       <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
-        {AGENTS.map(a => {
-          const s = states[a.id]
+        {Object.entries(AGENT_CATEGORIES).map(([key, cfg]) => {
+          const meta = CATEGORY_META[key] || { label: key, color: 'var(--accent)' }
+          const s = states[key]
           const isRunning = s.status === 'running'
           const isError = s.status === 'error'
+          const scheduledToday = shouldRunToday(key, new Date())
+
           return (
-            <div key={a.id} className="card">
+            <div key={key} className="card">
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ display: 'flex', gap: 12, flex: 1 }}>
                   <div style={{
                     width: 36, height: 36, borderRadius: 8,
-                    background: a.color + '18',
+                    background: meta.color + '18',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                   }}>
                     {isRunning
-                      ? <Loader size={16} color={a.color} style={{ animation: 'spin .8s linear infinite' }} />
+                      ? <Loader size={16} color={meta.color} style={{ animation: 'spin .8s linear infinite' }} />
                       : isError
                         ? <AlertCircle size={16} color="var(--danger)" />
-                        : <a.icon size={16} color={a.color} />}
+                        : <Bot size={16} color={meta.color} />}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{a.name}</span>
-                      <span style={{
-                        fontSize: 9, fontWeight: 700, padding: '2px 6px',
-                        borderRadius: 4, background: a.badgeColor + '22',
-                        color: a.badgeColor, fontFamily: 'var(--font-mono)',
-                      }}>{a.badge}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{meta.label}</span>
+                      {scheduledToday && (
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, padding: '2px 6px',
+                          borderRadius: 4, background: 'var(--success)22',
+                          color: 'var(--success)', fontFamily: 'var(--font-mono)',
+                        }}>SCHEDULED TODAY</span>
+                      )}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>{a.desc}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>
+                      {cfg.companies.length} companies · {(cfg.keywords?.length ? cfg.keywords : ['default keywords']).join(', ')}
+                    </div>
                   </div>
                 </div>
-                <button
-                  className="btn btn-accent"
-                  style={{ flexShrink: 0 }}
-                  disabled={isRunning}
-                  onClick={() => runAgent(a.id)}
-                >
+                <button className="btn btn-accent" style={{ flexShrink: 0 }} disabled={isRunning} onClick={() => runOne(key)}>
                   {isRunning
                     ? <><Loader size={11} style={{ animation: 'spin .8s linear infinite' }} /> Running...</>
-                    : 'Run ↗'}
+                    : 'Run Now ↗'}
                 </button>
               </div>
 
@@ -388,8 +173,10 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
                 fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)',
                 flexWrap: 'wrap',
               }}>
-                <span><Clock size={10} style={{ marginRight: 4, verticalAlign: 'middle' }} />Manual run</span>
-                <span>Last: {s.lastRun}</span>
+                <span><Clock size={10} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                  {cfg.days.length === 5 ? 'Mon-Fri' : cfg.days.length === 4 ? 'Mon-Thu' : 'Mon/Wed/Fri'}
+                </span>
+                <span>Last: {s.lastRun || '—'}</span>
                 {s.leadsFound !== null && (
                   <span style={{ color: s.leadsFound > 0 ? 'var(--accent)' : 'var(--warn)' }}>
                     {s.leadsFound} leads found
@@ -422,26 +209,6 @@ export default function AgentsPage({ onLeadsFound, extraPatterns = [] }) {
             </div>
           )
         })}
-      </div>
-
-      <div className="card">
-        <div className="card-title">Auto-scheduling options</div>
-        <div style={{ display: 'grid', gap: 10 }}>
-          {AUTOMATION.map((opt, i) => (
-            <div key={i} style={{
-              display: 'flex', gap: 12, padding: '10px 0',
-              borderBottom: i < AUTOMATION.length - 1 ? '1px solid var(--border)' : 'none',
-            }}>
-              <div style={{ minWidth: 90, fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--accent)', paddingTop: 1, textAlign: 'right' }}>
-                {opt.effort}
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 3 }}>{opt.label}</div>
-                <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.6 }}>{opt.detail}</div>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
