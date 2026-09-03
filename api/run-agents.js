@@ -1,137 +1,158 @@
-// api/run-agents.js
-// Vercel cron job — runs both memory-based agents daily at 8 AM CT
-// Add to vercel.json: { "crons": [{ "path": "/api/run-agents", "schedule": "0 13 * * 1,3,5" }] }
-// Runs Mon/Wed/Fri at 8 AM CT (13:00 UTC)
- 
-const GEORGE_PROFILE = `Candidate: George Brooks, Houston TX
-Target roles: Business Analyst, Agile PM, Scrum Master, QA Lead/Director, Product Owner
-Work preference: Remote first, Houston TX hybrid acceptable, Dallas/Austin considered
-Contract ($55-85/hr) or Full-Time ($110-140K) — needs role by June 10, 2026
-Background: 20+ years FSI, federal govt, enterprise tech
-Key employers: JPMC, Capco, Deloitte, Makpar/IRS
-Certs: CSM, SAFe POPM, PMP, Azure, Gen AI`
- 
-const SYSTEM_A1 = `You are a job search agent. Generate 8-10 realistic current job leads from staffing firms for this candidate. Firms: TekSystems, Kforce, Judge Group, Insight Global, Apex, CyberCoders, Robert Half. Locations: Houston TX, Dallas TX, Austin TX, Remote. Return ONLY a valid JSON array. Each object: { "role_title": string, "company": string, "via": string, "category": "QA"|"BA"|"PM"|"Consulting", "type": "Contract"|"Full-Time"|"Contract-to-Hire", "work_model": "Remote"|"Hybrid"|"On-site", "location": string, "pay_rate": string, "days_posted": null, "match_score": number, "contact_name": string, "contact_email": string, "apply_link": string, "notes": string } match_score 75-98.`
- 
-const SYSTEM_A2 = `You are a job search agent. Generate 8-10 realistic current job leads from FSI and consulting firms for this candidate. Firms: Capco, Deloitte, KPMG, EY, Accenture, Slalom, West Monroe, Pariveda, JPMC, Wells Fargo, USAA, Harris County, City of Houston. Return ONLY a valid JSON array with same schema as Agent 1. match_score 75-98. Prioritize consulting roles — candidate has Capco (2021-24) and Deloitte (2011-14) returnee advantage.`
- 
-async function runAgent(system, userMessage, apiKey) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 3000,
-      system,
-      messages: [{ role: 'user', content: userMessage }],
-    }),
-  })
- 
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error?.message || 'API error')
- 
-  const text = (data.content || [])
-    .filter(b => b.type === 'text')
-    .map(b => b.text)
-    .join('')
-    .trim()
- 
-  const clean = text.replace(/```json|```/g, '').trim()
-  const start = clean.indexOf('[')
-  const end = clean.lastIndexOf(']')
-  if (start === -1 || end === -1) return []
-  try { return JSON.parse(clean.slice(start, end + 1)) } catch { return [] }
+// api/run-agents.js — CommonJS, Vercel serverless.
+// REPLACES the currently-deployed version, which asked Claude to "generate
+// realistic" leads with no web_search tool attached — i.e., fabricated data
+// on a schedule. This version always uses live web_search (or a direct-fetch
+// adapter where one exists) and never asks the model to invent a posting.
+//
+// Triggers:
+//   - Cron (Mon-Fri 8AM CT, per vercel.json): runs whichever categories are
+//     scheduled today per src/agentCategories.js `days`.
+//   - Manual: GET /api/run-agents?categories=staffing,watchlist&force=true
+//     `categories` = comma-separated category keys, omit to consider all.
+//     `force=true` = ignore each category's `days` schedule and run anyway.
+
+const { AGENT_CATEGORIES, DEFAULT_ROLE_KEYWORDS, shouldRunToday } = require("../src/agentCategories");
+const { CLAUDE_MODEL, CLAUDE_MODEL_FAST } = require("../src/constants");
+
+const ZERO_HALLUCINATION_CLAUSE = `
+Report ONLY real, currently open postings you actually find via search. Never invent,
+guess, or extrapolate a listing. If you find no genuine matches, return an empty array —
+an empty result is correct and expected sometimes; a fabricated one is not.`;
+
+function buildSystemPrompt(company, keyword) {
+  return `You are a job search agent searching for real, currently open postings.
+Company/agency: ${company}
+Role focus: ${keyword}
+Target geography: Houston TX, Dallas TX, Austin TX, Remote (others may be added later).
+${ZERO_HALLUCINATION_CLAUSE}
+Return ONLY a valid JSON array. Each object: { "role_title": string, "company": string,
+"location": string, "work_model": "Remote"|"Hybrid"|"On-site", "employment_type":
+"Contract"|"Full-Time"|"Contract-to-Hire", "posting_date": string|null, "apply_link":
+string, "source": string, "description": string, "contact_name": string|null, "contact_email": string|null }.
+"description" should be a 3-5 sentence summary of the role's actual requirements and
+responsibilities as found — this feeds the Fit/Opportunity scoring engine, so pull real
+detail from the posting, don't just restate the title.
+Per the CONTACT_RULE: leave contact fields null unless a name/email is directly present in
+what you found — never invent one.`;
 }
- 
-async function sendEmailDigest(leads, sendgridKey) {
-  if (!sendgridKey || leads.length === 0) return
- 
-  const rows = leads.map(l =>
-    `<tr>
-      <td style="padding:8px;border-bottom:1px solid #eee">${l.role_title}</td>
-      <td style="padding:8px;border-bottom:1px solid #eee">${l.company}</td>
-      <td style="padding:8px;border-bottom:1px solid #eee">${l.work_model}</td>
-      <td style="padding:8px;border-bottom:1px solid #eee">${l.pay_rate}</td>
-      <td style="padding:8px;border-bottom:1px solid #eee">${l.match_score}%</td>
-      <td style="padding:8px;border-bottom:1px solid #eee"><a href="${l.apply_link}">Apply</a></td>
-    </tr>`
-  ).join('')
- 
-  await fetch('https://api.sendgrid.com/v3/mail/send', {
-    method: 'POST',
+
+async function callClaudeForLeads({ apiKey, model, system, userMessage, useWebSearch, maxTokens = 3000 }) {
+  const tools = [];
+  if (useWebSearch) tools.push({ type: "web_search_20250305", name: "web_search" });
+
+  const body = { model, max_tokens: maxTokens, system, messages: [{ role: "user", content: userMessage }] };
+  if (tools.length) body.tools = tools;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
     headers: {
-      'Authorization': `Bearer ${sendgridKey}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      ...(useWebSearch ? { "anthropic-beta": "web-search-2025-03-05" } : {}), // only when search tools present — see Issue 1/8 in scraping doc
     },
-    body: JSON.stringify({
-      personalizations: [{ to: [{ email: 'ghbrooks4@gmail.com' }] }],
-      from: { email: 'noreply@gb-job-hunt30.vercel.app', name: 'Job Hunt HQ' },
-      subject: `🎯 ${leads.length} new job leads — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
-      content: [{
-        type: 'text/html',
-        value: `
-          <h2 style="color:#00d4aa">Job Hunt HQ — Daily Lead Digest</h2>
-          <p>${leads.length} leads found today. Deadline: June 10, 2026.</p>
-          <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px">
-            <thead>
-              <tr style="background:#1a1a2e;color:#00d4aa">
-                <th style="padding:8px;text-align:left">Role</th>
-                <th style="padding:8px;text-align:left">Company</th>
-                <th style="padding:8px;text-align:left">Work Model</th>
-                <th style="padding:8px;text-align:left">Rate</th>
-                <th style="padding:8px;text-align:left">Match</th>
-                <th style="padding:8px;text-align:left">Link</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-          <p style="color:#888;font-size:12px">Sent by Job Hunt HQ · gb-job-hunt30.vercel.app</p>
-        `
-      }]
-    })
-  })
-}
- 
-export default async function handler(req, res) {
-  // Allow manual trigger via GET, or cron via any method
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return res.status(500).json({ error: 'No API key' })
- 
-  const sendgridKey = process.env.SENDGRID_API_KEY // optional
- 
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || "API error");
+
+  const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("").trim();
+  const clean = text.replace(/```json|```/g, "").trim();
+  const start = clean.indexOf("[");
+  const end = clean.lastIndexOf("]");
+  if (start === -1 || end === -1) return [];
   try {
-    const timestamp = new Date().toISOString()
-    console.log(`[run-agents] Starting at ${timestamp}`)
- 
-    const [leads1, leads2] = await Promise.all([
-      runAgent(SYSTEM_A1, `Generate job leads for:\n${GEORGE_PROFILE}\n\nReturn JSON array of 8-10 leads.`),
-      runAgent(SYSTEM_A2, `Generate FSI/consulting leads for:\n${GEORGE_PROFILE}\n\nReturn JSON array of 8-10 leads.`),
-    ])
- 
-    const allLeads = [...leads1, ...leads2].filter(l => l.role_title && l.apply_link)
-    console.log(`[run-agents] Found ${allLeads.length} leads total`)
- 
-    // Send email digest if SendGrid key is configured
-    if (sendgridKey) {
-      await sendEmailDigest(allLeads, sendgridKey)
-      console.log('[run-agents] Email digest sent')
-    }
- 
-    return res.status(200).json({
-      success: true,
-      timestamp,
-      leads_found: allLeads.length,
-      agent1: leads1.length,
-      agent2: leads2.length,
-      email_sent: !!sendgridKey,
-    })
- 
-  } catch (err) {
-    console.error('[run-agents] Error:', err.message)
-    return res.status(500).json({ error: err.message })
+    return JSON.parse(clean.slice(start, end + 1));
+  } catch {
+    return [];
   }
 }
+
+function makeLeadId(company, roleTitle) {
+  const slug = (s) => (s || "unknown").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  return `${slug(company)}_${slug(roleTitle)}`;
+}
+
+async function runCategory(categoryKey, apiKey) {
+  const category = AGENT_CATEGORIES[categoryKey];
+  const keywords = category.keywords && category.keywords.length ? category.keywords : DEFAULT_ROLE_KEYWORDS;
+  const useWebSearch = true; // always live — this is the fix. `fetch_preferred`
+                              // categories should eventually use a direct-fetch
+                              // adapter per site (JPMC Oracle REST style) instead
+                              // of search at all; those adapters are a per-site
+                              // TODO, not yet wired here — falls back to search
+                              // in the meantime, which is still live/real, just
+                              // not the cheapest path for those sites yet.
+  const model = category.modelTier === "fast_triage_then_standard" ? CLAUDE_MODEL_FAST : CLAUDE_MODEL;
+
+  const leads = [];
+  for (const company of category.companies) {
+    for (const keyword of keywords) {
+      try {
+        const found = await callClaudeForLeads({
+          apiKey,
+          model,
+          system: buildSystemPrompt(company, keyword),
+          userMessage: `Search for open ${keyword} roles at ${company}.`,
+          useWebSearch,
+        });
+        leads.push(
+          ...found.map((l) => ({
+            ...l,
+            id: makeLeadId(l.company, l.role_title), // required for appStore.mergeAgentLeads dedup
+            category: categoryKey,
+            matched_keyword: keyword,
+          }))
+        );
+      } catch (err) {
+        console.error(`[run-agents] ${categoryKey}/${company}/"${keyword}" failed: ${err.message}`);
+        // one failed company/keyword pair doesn't abort the whole category run
+      }
+    }
+  }
+  return leads;
+}
+
+module.exports = async function handler(req, res) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: "No API key" });
+
+  const requestedCategories = req.query && req.query.categories ? req.query.categories.split(",") : null;
+  const force = req.query && req.query.force === "true";
+  const today = new Date();
+
+  const categoriesToRun = Object.keys(AGENT_CATEGORIES).filter((key) => {
+    if (requestedCategories) return requestedCategories.includes(key);
+    return force || shouldRunToday(key, today);
+  });
+
+  if (categoriesToRun.length === 0) {
+    return res.status(200).json({
+      success: true,
+      message: "No categories scheduled today. Use ?categories=x,y or ?force=true to run manually.",
+      timestamp: today.toISOString(),
+    });
+  }
+
+  try {
+    const results = {};
+    for (const key of categoriesToRun) {
+      results[key] = await runCategory(key, apiKey);
+    }
+    const allLeads = Object.values(results).flat();
+
+    return res.status(200).json({
+      success: true,
+      timestamp: today.toISOString(),
+      triggered_by: requestedCategories ? "manual" : force ? "manual_force" : "cron",
+      categories_run: categoriesToRun,
+      leads_found: allLeads.length,
+      by_category: Object.fromEntries(Object.entries(results).map(([k, v]) => [k, v.length])),
+      leads: allLeads,
+    });
+  } catch (err) {
+    console.error("[run-agents] Error:", err.message);
+    return res.status(500).json({ error: err.message });
+  }
+};
