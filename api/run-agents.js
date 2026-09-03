@@ -10,15 +10,15 @@
 //   - Manual: GET /api/run-agents?categories=staffing,watchlist&force=true
 //     `categories` = comma-separated category keys, omit to consider all.
 //     `force=true` = ignore each category's `days` schedule and run anyway.
-
+ 
 const { AGENT_CATEGORIES, DEFAULT_ROLE_KEYWORDS, shouldRunToday } = require("../src/agentCategories");
 const { CLAUDE_MODEL, CLAUDE_MODEL_FAST } = require("../src/constants");
-
+ 
 const ZERO_HALLUCINATION_CLAUSE = `
 Report ONLY real, currently open postings you actually find via search. Never invent,
 guess, or extrapolate a listing. If you find no genuine matches, return an empty array —
 an empty result is correct and expected sometimes; a fabricated one is not.`;
-
+ 
 function buildSystemPrompt(company, keyword) {
   return `You are a job search agent searching for real, currently open postings.
 Company/agency: ${company}
@@ -35,14 +35,14 @@ detail from the posting, don't just restate the title.
 Per the CONTACT_RULE: leave contact fields null unless a name/email is directly present in
 what you found — never invent one.`;
 }
-
-async function callClaudeForLeads({ apiKey, model, system, userMessage, useWebSearch, maxTokens = 3000 }) {
+ 
+async function callClaudeForLeads({ apiKey, model, system, userMessage, useWebSearch, maxTokens = 3000, logTag = "" }) {
   const tools = [];
   if (useWebSearch) tools.push({ type: "web_search_20250305", name: "web_search" });
-
+ 
   const body = { model, max_tokens: maxTokens, system, messages: [{ role: "user", content: userMessage }] };
   if (tools.length) body.tools = tools;
-
+ 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -53,27 +53,40 @@ async function callClaudeForLeads({ apiKey, model, system, userMessage, useWebSe
     },
     body: JSON.stringify(body),
   });
-
+ 
   const data = await res.json();
   if (!res.ok) throw new Error(data.error?.message || "API error");
-
+ 
+  // Diagnostic logging — visible in Vercel's Function Logs. Fixes a real gap:
+  // previously a parse failure or "model chose not to search" silently
+  // returned [] with no trace, making a 0-leads run indistinguishable from
+  // a genuine "nothing found" result.
+  const usedSearch = (data.content || []).some((b) => b.type === "server_tool_use" || b.type === "web_search_tool_result");
+  console.log(`[run-agents] ${logTag} stop_reason=${data.stop_reason} usedSearch=${usedSearch} blocks=${(data.content || []).map((b) => b.type).join(",")}`);
+ 
   const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("").trim();
   const clean = text.replace(/```json|```/g, "").trim();
   const start = clean.indexOf("[");
   const end = clean.lastIndexOf("]");
-  if (start === -1 || end === -1) return [];
+  if (start === -1 || end === -1) {
+    console.log(`[run-agents] ${logTag} NO JSON ARRAY FOUND. Raw text (first 500 chars): ${text.slice(0, 500)}`);
+    return [];
+  }
   try {
-    return JSON.parse(clean.slice(start, end + 1));
-  } catch {
+    const parsed = JSON.parse(clean.slice(start, end + 1));
+    console.log(`[run-agents] ${logTag} parsed ${parsed.length} lead(s)`);
+    return parsed;
+  } catch (err) {
+    console.log(`[run-agents] ${logTag} JSON PARSE FAILED (${err.message}). Raw text (first 500 chars): ${text.slice(0, 500)}`);
     return [];
   }
 }
-
+ 
 function makeLeadId(company, roleTitle) {
   const slug = (s) => (s || "unknown").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
   return `${slug(company)}_${slug(roleTitle)}`;
 }
-
+ 
 async function runCategory(categoryKey, apiKey) {
   const category = AGENT_CATEGORIES[categoryKey];
   const keywords = category.keywords && category.keywords.length ? category.keywords : DEFAULT_ROLE_KEYWORDS;
@@ -85,7 +98,7 @@ async function runCategory(categoryKey, apiKey) {
                               // in the meantime, which is still live/real, just
                               // not the cheapest path for those sites yet.
   const model = category.modelTier === "fast_triage_then_standard" ? CLAUDE_MODEL_FAST : CLAUDE_MODEL;
-
+ 
   const leads = [];
   for (const company of category.companies) {
     for (const keyword of keywords) {
@@ -96,6 +109,7 @@ async function runCategory(categoryKey, apiKey) {
           system: buildSystemPrompt(company, keyword),
           userMessage: `Search for open ${keyword} roles at ${company}.`,
           useWebSearch,
+          logTag: `${categoryKey}/${company}/"${keyword}"`,
         });
         leads.push(
           ...found.map((l) => ({
@@ -113,20 +127,20 @@ async function runCategory(categoryKey, apiKey) {
   }
   return leads;
 }
-
+ 
 module.exports = async function handler(req, res) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "No API key" });
-
+ 
   const requestedCategories = req.query && req.query.categories ? req.query.categories.split(",") : null;
   const force = req.query && req.query.force === "true";
   const today = new Date();
-
+ 
   const categoriesToRun = Object.keys(AGENT_CATEGORIES).filter((key) => {
     if (requestedCategories) return requestedCategories.includes(key);
     return force || shouldRunToday(key, today);
   });
-
+ 
   if (categoriesToRun.length === 0) {
     return res.status(200).json({
       success: true,
@@ -134,14 +148,14 @@ module.exports = async function handler(req, res) {
       timestamp: today.toISOString(),
     });
   }
-
+ 
   try {
     const results = {};
     for (const key of categoriesToRun) {
       results[key] = await runCategory(key, apiKey);
     }
     const allLeads = Object.values(results).flat();
-
+ 
     return res.status(200).json({
       success: true,
       timestamp: today.toISOString(),
