@@ -4,7 +4,9 @@
 import { useState, useEffect } from 'react'
 import { ExternalLink, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import RoleActionPanel from '../components/RoleActionPanel.jsx'
-import { loadLeadStatuses, saveLeadStatus } from '../store/appStore.js'
+
+import { loadLeadStatuses, saveLeadStatus, updateLeadScore } from '../store/appStore.js'
+import { SOT_PORTFOLIO } from '../constants.js'
 
 const SEED_LEADS = [
   // -- AGENT 1: Recruiters + Job Boards --------------------------------------
@@ -551,6 +553,104 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
     else { setSortCol(col); setSortDir('desc') }
   }
 
+  // ── Phase 1/2 scoring ──────────────────────────────────────────────────────
+  const [scoringIds, setScoringIds] = useState({})
+
+  const scoreRole = async (l) => {
+    setScoringIds(prev => ({ ...prev, [l.id]: true }))
+    try {
+      const sotSummaries = Object.entries(SOT_PORTFOLIO)
+        .filter(([, v]) => v.status === 'APPROVED' && v.summary)
+        .map(([key, v]) => ({ key, tier: v.tier, definition: v.definition, summary: v.summary }))
+
+      const jobPostingText = l.description
+        || `${l.role_title} at ${l.company}, ${l.location || l.work_model || ''}. ${l.notes || ''}`.trim()
+
+      const res = await fetch('/api/analyze-job', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobPostingText, sotSummaries }),
+      })
+      const result = await res.json()
+      if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`)
+
+      updateLeadScore(l.id, result)
+
+      // Reflect immediately in this component's local leads state, same
+      // fields DashboardPage's patch already knows how to read.
+      setLeads(prev => prev.map(existing => existing.id === l.id ? {
+        ...existing,
+        fit_score: result.fit_analysis?.fit_score ?? null,
+        opportunity_score: result.opportunity_analysis?.opportunity_score ?? null,
+        priority: result.opportunity_analysis?.priority ?? false,
+        recommendation_grade: result.recommendation?.grade ?? null,
+        recommendation_rationale: result.recommendation?.rationale ?? null,
+        sot_recommendation: result.sot_recommendation ?? null,
+        phase2_analysis_full: result, // Apply needs the complete analysis, not just the summary fields
+      } : existing))
+    } catch (e) {
+      alert(`Scoring failed: ${e.message}`)
+    } finally {
+      setScoringIds(prev => { const next = { ...prev }; delete next[l.id]; return next })
+    }
+  }
+
+  // ── Phase 3/4 Apply — Option 2: evidence-cited change plan (tailor-resume.js)
+  // + synchronous adm-zip docx generation (optimize-resume.js, the same proven
+  // technique RoleActionPanel's "Prep" flow already uses). No LibreOffice, no
+  // Claude session required for this path — see README "Apply" note for why.
+  const [applyingIds, setApplyingIds] = useState({})
+
+  const applyToRole = async (l) => {
+    if (!l.sot_recommendation?.selected_sot_key || !l.phase2_analysis_full) {
+      alert('Score this role first — Apply needs a Phase 2 analysis to know which resume to tailor and cite evidence from.')
+      return
+    }
+    setApplyingIds(prev => ({ ...prev, [l.id]: true }))
+    try {
+      const planRes = await fetch('/api/tailor-resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sotKey: l.sot_recommendation.selected_sot_key,
+          phase2Analysis: l.phase2_analysis_full,
+        }),
+      })
+      const plan = await planRes.json()
+      if (!planRes.ok || plan.error) throw new Error(plan.error || `HTTP ${planRes.status}`)
+
+      const bullets = (plan.changes || []).map(c => c.proposed_text).filter(Boolean).join('\n')
+      if (!bullets) throw new Error('Change plan returned no proposed bullets to apply')
+
+      const docxRes = await fetch('/api/optimize-resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bullets,
+          role: { role_title: l.role_title, company: l.company },
+          variant: l.sot_recommendation.selected_sot_key, // VARIANT_FILES keys now match SOT_PORTFOLIO keys — see PATCH_optimize-resume_js.md
+        }),
+      })
+      if (!docxRes.ok) {
+        const err = await docxRes.json().catch(() => ({}))
+        throw new Error(err.error || `HTTP ${docxRes.status}`)
+      }
+
+      const blob = await docxRes.blob()
+      const filename = docxRes.headers.get('X-Output-Filename') || `George_Brooks_Resume_${l.company}.docx`
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = filename
+      document.body.appendChild(a); a.click(); a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (e) {
+      alert(`Apply failed: ${e.message}`)
+    } finally {
+      setApplyingIds(prev => { const next = { ...prev }; delete next[l.id]; return next })
+    }
+  }
+
+  
   const updateStatus = (id, val) => {
     saveLeadStatus(id, val)
     setLeads(prev => prev.map(l => l.id === id ? { ...l, status: val } : l))
@@ -757,14 +857,33 @@ export default function LeadsPage({ onApplicationLogged, agentLeads = [], initia
                     {STATUS_OPTIONS.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </td>
-                <td style={{ position: 'sticky', right: 0, background: 'var(--bg2)', zIndex: 1 }}>
+               
+               
+                                <td style={{ position: 'sticky', right: 0, background: 'var(--bg2)', zIndex: 1 }}>
                   <div style={{ display: 'flex', gap: 3 }}>
-                    <button className="btn btn-sm btn-accent" onClick={() => setActiveRole(l)}>Prep</button>
+                    <button
+                      className="btn btn-sm"
+                      disabled={!!scoringIds[l.id]}
+                      onClick={() => scoreRole(l)}
+                      title={l.fit_score != null ? `Re-score (current: ${l.fit_score}/${l.opportunity_score})` : 'Run Phase 1/2 Fit/Opportunity scoring'}
+                    >
+                      {scoringIds[l.id] ? '...' : (l.fit_score != null ? 'Re-score' : 'Score')}
+                    </button>
+                    <button
+                      className="btn btn-sm btn-accent"
+                      disabled={!!applyingIds[l.id] || l.fit_score == null}
+                      onClick={() => applyToRole(l)}
+                      title={l.fit_score == null ? 'Score this role first' : 'Generate an ATS-tailored resume for this role'}
+                    >
+                      {applyingIds[l.id] ? '...' : 'Apply'}
+                    </button>
+                    <button className="btn btn-sm" onClick={() => setActiveRole(l)}>Prep</button>
                     <a href={l.apply_link} target="_blank" rel="noopener noreferrer">
                       <button className="btn btn-sm"><ExternalLink size={10} /></button>
                     </a>
                   </div>
                 </td>
+                
               </tr>
             ))}
           </tbody>
