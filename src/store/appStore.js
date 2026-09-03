@@ -47,4 +47,30 @@ export function mergeAgentLeads(newLeads) {
   const merged = [...existing, ...newLeads.filter(l => !ids.has(l.id))]
   save(KEYS.AGENT_LEADS, merged)
   return merged
+
+// Attach Phase 1/2 scoring output (from api/analyze-job.js) onto an existing
+// agent-found lead, by id. Flattens the fields DashboardPage.jsx's patch
+// looks for (fit_score, opportunity_score, priority, recommendation_grade)
+// directly onto the lead object rather than nesting the full analysis JSON,
+// so the dashboard patch can read them with no further transformation.
+export function updateLeadScore(id, phase2Result) {
+  const leads = load(KEYS.AGENT_LEADS, [])
+  const i = leads.findIndex(l => l.id === id)
+  if (i === -1) return leads // lead not found — caller should check the length
+                              // didn't change if this matters to them
+
+  leads[i] = {
+    ...leads[i],
+    fit_score: phase2Result.fit_analysis?.fit_score ?? null,
+    opportunity_score: phase2Result.opportunity_analysis?.opportunity_score ?? null,
+    priority: phase2Result.opportunity_analysis?.priority ?? false,
+    recommendation_grade: phase2Result.recommendation?.grade ?? null,
+    recommendation_rationale: phase2Result.recommendation?.rationale ?? null,
+    sot_recommendation: phase2Result.sot_recommendation ?? null,
+    phase2_analysis_full: phase2Result, // Apply (Phase 3) needs the whole thing to cite evidence
+    scored_at: new Date().toISOString(),
+  }
+  save(KEYS.AGENT_LEADS, leads)
+  return leads
+}  
 }
