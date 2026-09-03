@@ -28,15 +28,21 @@ module.exports = async function handler(req, res) {
   const REPO  = process.env.GITHUB_REPO  || 'gb-job-hunt30'
   const TOKEN = process.env.GITHUB_TOKEN
 
+  // Keys here match SOT_PORTFOLIO keys in src/constants.js — keep these in sync.
+  // fsi and consulting remain MISSING (no file exists yet); left mapped to their
+  // intended filenames so this fails loudly (404 from the fetch below) rather than
+  // silently substituting a different resume if either is requested before it exists.
   const VARIANT_FILES = {
-    fsi:        'George_Brooks_Resume_FSI.docx',
-    consulting: 'George_Brooks_Resume_Consulting.docx',
-    pm:         'George_Brooks_Resume_PM_Product.docx',
-    qa:         'George_Brooks_Resume_Testing_QA.docx',
-    delivery:   'George_Brooks_Resume_Delivery_Management.docx',
-    ba:         'George_Brooks_Resume_Consulting.docx',
+    primary:              'George_Brooks_Resume_Delivery_Management.docx',
+    supporting_ba:        'George_Brooks_Resume_PM_Product.docx',
+    supporting_agile_pm:  'George_Brooks_Resume_ScrumMaster_AgilePM.docx',
+    supporting_qa:        'George_Brooks_QA_Testing_Lead_Resume.docx',
+    secondary:            'George_Brooks_Resume_Consulting.docx', // MISSING — see note above
+    industry_fsi:         'George_Brooks_Resume_FSI.docx',        // MISSING — see note above
   }
 
+
+  
   const sourceFile  = VARIANT_FILES[variant] || 'George_Brooks_Resume_Consulting.docx'
   const roleSlug    = (role.role_title || 'role').replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'_').slice(0,35)
   const companySlug = (role.company || 'co').replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'_').slice(0,20)
