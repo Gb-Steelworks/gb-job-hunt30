@@ -1,7 +1,9 @@
 // api/claude.js — Vercel serverless function
 // Proxies requests to Anthropic API with optional web_search tool support
 // Drop into /api/claude.js in your repo
- 
+
+const { CLAUDE_MODEL } = require('../src/constants');
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -31,8 +33,8 @@ module.exports = async function handler(req, res) {
  
   // ── Build Anthropic request ─────────────────────────────────────────────────
   const {
-    model = 'claude-haiku-4-5-20251001', // ← update here when Anthropic deprecates — keep in sync with src/constants.js
-    max_tokens = 4096,
+     model = CLAUDE_MODEL, // pulled from src/constants.js — no more manual sync, no more drift
+      max_tokens = 4096,
     system,
     messages,
     useWebSearch = false,   // pass true from agent calls to enable live search
