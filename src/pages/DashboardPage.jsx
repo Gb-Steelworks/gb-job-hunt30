@@ -70,10 +70,27 @@ export default function DashboardPage({ onNavigate, leads = [], applications = [
     return next
   })
 
-  const topLeads = leads.length > 0
-    ? [...leads].sort((a, b) => (b.match_score || 0) - (a.match_score || 0)).slice(0, 5)
-    : STATIC_LEADS
+  // Sort priority: priority flag (posted <21 days, per Phase 2 recency rule) first,
+  // then pursuit recommendation grade (A-E), then combined Fit+Opportunity score.
+  // Falls back to the old single match_score for any lead that hasn't been through
+  // the new Phase 1/2 engine yet — nothing regresses for un-scored leads.
+  const GRADE_RANK = { A: 5, B: 4, C: 3, D: 2, E: 1 }
 
+  const sortWeight = (lead) => {
+    if (lead.recommendation_grade) {
+      const gradeScore = (GRADE_RANK[lead.recommendation_grade] || 0) * 1000
+      const priorityBoost = lead.priority ? 10000 : 0
+      const fit = lead.fit_score ?? 0
+      const opp = lead.opportunity_score ?? 0
+      return priorityBoost + gradeScore + fit + opp
+    }
+    return lead.match_score || 0
+  }
+
+  const topLeads = leads.length > 0
+    ? [...leads].sort((a, b) => sortWeight(b) - sortWeight(a)).slice(0, 5)
+    : STATIC_LEADS
+  
   const applied    = applications.length
   const inProgress = applications.filter(a => !['Applied', 'Closed'].includes(a.status)).length
   const interviews = applications.filter(a => ['Interview Pending', 'Interviewed'].includes(a.status)).length
@@ -159,8 +176,34 @@ export default function DashboardPage({ onNavigate, leads = [], applications = [
                     {r.company}{r.days_posted != null ? ` · ${r.days_posted}d ago` : ''}
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  {r.priority && (
+                    <span
+                      title="Posted under 21 days ago — priority per recency rule"
+                      style={{
+                        fontSize: 9, padding: '2px 5px', borderRadius: 4,
+                        background: 'rgba(255,180,0,0.15)', color: 'var(--warn)',
+                        fontFamily: 'var(--font-mono)', fontWeight: 700, flexShrink: 0,
+                      }}
+                    >
+                      ⚡
+                    </span>
+                  )}
+                  {r.recommendation_grade && (
+                    <span
+                      title={`Pursuit recommendation: ${r.recommendation_grade}`}
+                      style={{
+                        fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                        background: 'var(--bg3)', color: 'var(--accent)',
+                        fontFamily: 'var(--font-mono)', flexShrink: 0,
+                      }}
+                    >
+                      {r.recommendation_grade}
+                    </span>
+                  )}
                   {/* Inline status selector — syncs with Leads page via shared leadStatuses */}
+                  
                   <select
                     value={st}
                     onChange={handleStatusChange}
@@ -177,9 +220,16 @@ export default function DashboardPage({ onNavigate, leads = [], applications = [
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>
-                    {r.match_score}%
-                  </span>
+                
+                                       <span
+                    title={r.fit_score != null ? 'Fit score / Opportunity score' : 'Match score'}
+                    style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}
+                  >
+                    {r.fit_score != null
+                      ? `${r.fit_score}/${r.opportunity_score ?? '–'}`
+                      : `${r.match_score}%`}
+                  </span>             
+                                  
                   {(r.apply_link || r.applyLink) && (
                     <button
                       onClick={(e) => openLink(e, r.apply_link || r.applyLink)}
